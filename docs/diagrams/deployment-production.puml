@@ -1,0 +1,185 @@
+@startuml deployment-production
+'==============================================================
+' BrewLite – UML Deployment diagram cho môi trường production
+' Nền tảng thực tế: Render (xem ADR-006)
+' Task 3.2 (Assignment 2)
+'==============================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam node {
+  BackgroundColor #F5F7FA
+  BorderColor #2C3E50
+  FontColor #1B2631
+  FontStyle bold
+}
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #5D6D7E
+}
+skinparam database {
+  BackgroundColor #EAEDED
+  BorderColor #2C3E50
+  FontColor #1B2631
+}
+skinparam artifact {
+  BackgroundColor #FDEBD0
+  BorderColor #B9770E
+  FontColor #5D4037
+}
+skinparam cloud {
+  BackgroundColor #F5F7FA
+  BorderColor #2C3E50
+}
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #5D6D7E
+  FontStyle bold
+}
+skinparam ArrowColor #2C3E50
+skinparam ArrowFontColor #2C3E50
+skinparam linetype ortho
+
+title BrewLite – Deployment Diagram (Production: Render)
+
+'---------------- Thiết bị người dùng ----------------
+node "Thiết bị người dùng\n(Trình duyệt / PWA\nmobile-first)" as Device {
+  artifact "PWA bundle\n(manifest + service worker)" as PWA
+}
+
+'---------------- CI ----------------
+node "CI – GitHub Actions\n(.github/workflows/)" as CI {
+  component "Job: lint & test\n(quality gate)" as JobTest
+  component "Job: build\nDocker image" as JobBuild
+  component "Job: push registry\n+ deploy + smoke test" as JobCD
+}
+
+'---------------- Registry ----------------
+node "Container Registry\nDocker Hub" as Registry {
+  artifact "brewlite-web:<commit-sha>" as ImgWeb
+  artifact "brewlite-api:<commit-sha>" as ImgApi
+  artifact "brewlite-web:latest" as ImgWebLatest
+  artifact "brewlite-api:latest" as ImgApiLatest
+}
+
+'---------------- Production: Render ----------------
+node "Nền tảng triển khai – Render (PaaS)" as Render {
+
+  node "Web Service: brewlite-web\n(Container Docker)" as WebSvc {
+    artifact "Image: brewlite-web:<sha>\nNext.js 20 + Node 20-alpine\noutput: 'standalone'" as ImgWebRun
+    component "Next.js Server\n(App Router, SSR/CSR)\nPort: $PORT (Render cấp)\nHTTPS do Render cấp chứng chỉ" as NextRun
+  }
+
+  node "Web Service: brewlite-api\n(Container Docker)" as ApiSvc {
+    artifact "Image: brewlite-api:<sha>\nNestJS + Prisma\nNode 20-alpine (non-root)" as ImgApiRun
+    component "NestJS API\nModules: products, auth,\norders, payments, loyalty, health" as NestRun
+    component "EntryPoint\nprisma migrate deploy\n&& node dist/main.js" as Entrypoint
+  }
+
+  node "PostgreSQL 15 – Managed\nbrewlite-db" as DBSvc {
+    database "PostgreSQL\nPersistent Storage (Render Disk)\nInternal URL – KHÔNG public" as PG
+  }
+}
+
+'---------------- Local ----------------
+node "Môi trường LOCAL\n(docker-compose.yml)" as Local {
+  component "Container brewlite_web\nNext.js :3000" as LocalWeb
+  component "Container brewlite_api\nNestJS :4000" as LocalApi
+  component "Container brewlite_postgres\nPostgreSQL :5432" as LocalDB
+}
+
+'---------------- Quan hệ CI / Registry ----------------
+CI --> JobTest
+JobTest --> JobBuild : quality gate pass\n(lint + test + build)
+JobBuild --> Registry : docker push\n(tag = commit SHA)
+JobCD --> Registry : docker pull\n(image tag theo SHA)
+
+'---------------- Quan hệ Render ----------------
+Registry --> WebSvc : deploy image\nbrewlite-web:<sha>
+Registry --> ApiSvc : deploy image\nbrewlite-api:<sha>
+NextRun ..> NestRun : HTTPS /api/v1/*\n(CORS allowlist)
+Entrypoint --> PG : prisma migrate deploy\n(prisma:// — internal network)
+NestRun --> PG : Prisma client\ninternal connection\n(port 5432)
+NestRun ..> DBSvc : Health Check Path\nGET /health
+
+'---------------- Quan hệ người dùng ----------------
+Device --> NextRun : **HTTPS 443**\nhttps://brewlite-web.onrender.com
+Device --> NestRun : **HTTPS 443**\nhttps://brewlite-api.onrender.com/api/v1\nhttps://brewlite-api.onrender.com/health
+
+'---------------- Local ----------------
+LocalWeb --> LocalApi : http://localhost:4000\n(HTTP nội bộ)
+LocalApi --> LocalDB : postgresql://…@localhost:5432
+
+note right of Device
+  **Ranh giới người dùng**
+  • Chỉ truy cập qua **HTTPS**
+  • Không truy cập trực tiếp DB
+  • PWA cache tài nguyên tĩnh
+end note
+
+note bottom of DBSvc
+  **Ranh giới dữ liệu**
+  • Database **không** public trực tiếp
+  • Chỉ truy cập qua private network
+    của Render (internal DB URL)
+  • Mọi kết nối dùng chuỗi trong
+    biến môi trường `DATABASE_URL`
+  • Persistent storage: Render Disk
+end note
+
+note bottom of ApiSvc
+  **Secret / Environment variables**
+  (Render Environment Variables,
+   mã hóa at rest – KHÔNG nằm trong repo)
+
+  • `DATABASE_URL` (internal DB URL)
+  • `JWT_SECRET` (random ≥ 32 bytes)
+  • `NODE_ENV=production`
+  • `PORT` (Render cấp)
+  • `PAYMENT_PROVIDER=mock`
+
+  **Health check**
+  • `GET /health` → 200 + trạng thái DB
+  • Render dùng làm Health Check Path
+  • CD pipeline gọi smoke test sau deploy
+end note
+
+note bottom of WebSvc
+  **Secret / Environment variables**
+  • `NEXT_PUBLIC_API_URL`
+    = https://brewlite-api.onrender.com
+  • `NODE_ENV=production`
+
+  **Log**
+  • stdout/stderr → Render log stream
+  • `requestId` trong log để truy vết
+end note
+
+note bottom of CI
+  **Secret trong CI**
+  (GitHub Actions Secrets – không lộ trong log)
+  • `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`
+  • `RENDER_API_KEY`
+  • `RENDER_WEB_SERVICE_ID`, `RENDER_API_SERVICE_ID`
+  • `POSTGRES_PASSWORD`, `JWT_SECRET`
+end note
+
+note bottom of Local
+  **Ranh giới LOCAL**
+  • `cp .env.example .env` → `docker compose up`
+  • Postgres có healthcheck; API chỉ
+    khởi động sau khi DB `healthy`
+  • API chạy `prisma migrate deploy` + seed
+  • Chỉ dùng cho phát triển, KHÔNG
+    dùng dữ liệu production
+end note
+
+legend right
+  |= Ký hiệu |= Ý nghĩa |
+  | <b>HTTPS 443</b> | Giao thức public qua Internet |
+  | <b>Internal</b> | Mạng nội bộ Render, không public |
+  | <b><:sha></b> | Image tag theo commit SHA |
+  | Ranh giới | Docker container / private network |
+endlegend
+
+@enduml

@@ -1,0 +1,63 @@
+# ---- Dependencies ----
+node_modules/
+.pnp
+.pnp.js
+
+# ---- Build output ----
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# ---- NestJS ----
+*.nestjs*
+nest-cli.json.bak
+
+# ---- Test / coverage ----
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# ---- Environment & secrets (KHÔNG BAO GIỜ commit file thật) ----
+.env
+.env.*
+!.env.example
+
+# ---- Logs ----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# ---- Docker ----
+.docker-data/
+docker-data/
+*.pid
+
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# ---- Misc ----
+*.tsbuildinfo
+.vscode/*
+!.vscode/extensions.json
+
+# ---- Personal progress tracker (local only, KHÔNG commit) ----
+# TODO.md là hướng dẫn chạy app cho team → ĐƯỢC commit.
+# .TODO.md là tracker cá nhân → KHÔNG commit.
+.TODO.md
+
+# ---- Assignment PDFs (local reference only, không push lên git) ----
+Assignment2-BrewLite.pdf
+BrewLite-CongNghePhanMem.pdf

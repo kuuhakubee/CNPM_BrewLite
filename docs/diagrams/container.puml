@@ -1,0 +1,85 @@
+@startuml container
+'==============================================================
+' BrewLite – C4 Level 2: Container diagram
+' Task 3.1 (Assignment 2)
+' Nguồn: docs/architecture/architecture.md §3
+'==============================================================
+!include <C4/C4_Container>
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam Person {
+  BackgroundColor #2C3E50
+  BorderColor #1B2631
+  FontColor #FFFFFF
+}
+skinparam Container {
+  BackgroundColor #F5F7FA
+  BorderColor #2C3E50
+  FontColor #1B2631
+  FontStyle bold
+}
+skinparam Component {
+  BackgroundColor #FFFFFF
+  BorderColor #5D6D7E
+  FontColor #1B2631
+}
+skinparam ContainerDb {
+  BackgroundColor #EAEDED
+  BorderColor #2C3E50
+  FontColor #1B2631
+}
+skinparam ComponentDb {
+  BackgroundColor #EAEDED
+  BorderColor #5D6D7E
+  FontColor #1B2631
+}
+skinparam ArrowColor #2C3E50
+skinparam ArrowFontColor #2C3E50
+
+title BrewLite – C4 Level 2: Container diagram
+
+Person(user, "Khách hàng", "Xem menu, đặt món, thanh toán, theo dõi đơn")
+
+System_Boundary(b1, "BrewLite") {
+
+  Container(web, "Web App", "Next.js 20 (App Router), React, TailwindCSS, Zustand", "Hiển thị menu, chi tiết sản phẩm, giỏ hàng, checkout, lịch sử đơn. PWA mobile-first (manifest + service worker).")
+
+  Container(api, "REST API", "NestJS 10, TypeScript, class-validator, Passport JWT", "Toàn bộ nghiệp vụ: menu, đơn, thanh toán, trạng thái, khuyến mãi, loyalty, health check.")
+
+  Container_Boundary(apiBoundary, "Các module nghiệp vụ bên trong API") {
+    Component(mProduct, "ProductsModule", "NestJS module", "GET /products, GET /products/:id — lọc theo danh mục, validate id.")
+    Component(mAuth, "AuthModule", "NestJS module + JwtStrategy", "POST /auth/register, POST /auth/login — bcrypt + phát hành JWT.")
+    Component(mOrder, "OrdersModule", "NestJS module + transaction", "POST /orders (transaction, trừ tồn kho), GET /orders/me, máy trạng thái đơn.")
+    Component(mPay, "PaymentsModule", "NestJS module", "POST /payments — idempotent bằng Idempotency-Key.")
+    Component(mPromo, "PromotionsModule", "NestJS module", "Kiểm tra & áp dụng mã khuyến mãi.")
+    Component(mLoyalty, "LoyaltyModule", "NestJS module", "Cộng/trừ điểm thưởng, ghi LoyaltyTransaction.")
+    Component(mInfra, "PrismaService + Logging + ErrorFilter", "Hạ tầng chung", "Truy cập DB, log JSON có requestId, response lỗi thống nhất, /health.")
+  }
+
+  Container(paygw, "Mock Payment Service", "NestJS module – PaymentGateway interface", "Mô phỏng cổng Ví/Thẻ: nhận charge(), trả SUCCESS/FAILED theo PAYMENT_SUCCESS_RATE.")
+
+  ContainerDb(db, "Database", "PostgreSQL 15 + Prisma ORM", "User, Product, Order, OrderItem, Payment, Promotion, LoyaltyTransaction. Migration + seed.")
+}
+
+System_Ext(gateway, "Cổng thanh toán (ngoài hệ thống)", "Momo / VNPay / Stripe — mô phỏng trong phạm vi bài tập")
+System_Ext(inventory, "Hệ thống quản lý tồn kho / menu", "Nguồn giá & tồn kho")
+
+Rel(user, web, "HTTPS", "Mở app, xem menu, đặt hàng")
+Rel(web, api, "REST/JSON qua HTTPS", "CORS allowlist; Authorization: Bearer <JWT>")
+Rel(api, db, "Prisma client (internal, 5432)", "Đọc/ghi trong transaction")
+Rel(api, paygw, "POST /payment-gateway/charge", "Kèm Idempotency-Key")
+Rel(paygw, gateway, "Mô phỏng giao dịch", "SUCCESS / FAILED")
+Rel(api, inventory, "Đọc giá & tồn kho", "Tính lại giá ở server")
+
+Rel(api, mProduct, "Chứa")
+Rel(api, mAuth, "Chứa")
+Rel(api, mOrder, "Chứa")
+Rel(api, mPay, "Chứa")
+Rel(api, mPromo, "Chứa")
+Rel(api, mLoyalty, "Chứa")
+Rel(api, mInfra, "Chứa")
+
+SHOW_LEGEND()
+@enduml

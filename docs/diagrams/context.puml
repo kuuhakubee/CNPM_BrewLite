@@ -1,0 +1,52 @@
+@startuml context
+'==============================================================
+' BrewLite – C4 Level 1: System context diagram
+' Task 3.1 (Assignment 2)
+' Nguồn: docs/architecture/architecture.md §2
+'==============================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam person {
+  BackgroundColor #2C3E50
+  BorderColor #1B2631
+  FontColor #FFFFFF
+}
+skinparam system {
+  BackgroundColor #F5F7FA
+  BorderColor #2C3E50
+  FontColor #1B2631
+}
+skinparam external {
+  BackgroundColor #EAEDED
+  BorderColor #5D6D7E
+  FontColor #1B2631
+}
+skinparam ArrowColor #2C3E50
+skinparam ArrowFontColor #2C3E50
+
+title BrewLite – C4 Level 1: System context
+
+person "Khách hàng" as User
+person "Nhân viên quầy\n(Barista)" as Barista
+person "Quản lý cửa hàng /\nProduct Owner" as Manager
+
+system "BrewLite\n(Ứng dụng đặt & thanh toán\nđồ uống không tiền mặt)" as BrewLite
+
+external "Cổng thanh toán\n(WALLET / CARD)\n— mô phỏng" as PayGW
+external "Hệ thống quản lý\nmenu & tồn kho" as Inventory
+
+User --> BrewLite : Xem menu, đặt món,\nthanh toán, theo dõi đơn
+BrewLite --> User : Menu, mã đơn,\ntrạng thái đơn
+Barista --> BrewLite : Cập nhật trạng thái đơn\n(ngoài phạm vi MVP)
+Manager --> BrewLite : Quản lý menu,\nkhuyến mãi (ngoài phạm vi MVP)
+BrewLite --> PayGW : Yêu cầu thanh toán\n(kèm Idempotency-Key)
+PayGW --> BrewLite : Kết quả\nSUCCESS / FAILED
+BrewLite --> Inventory : Đọc giá & tồn kho
+
+note bottom of BrewLite
+  Ranh giới hệ thống:
+  Next.js (PWA) + NestJS API + PostgreSQL + Mock Payment Service
+end note
+
+@enduml

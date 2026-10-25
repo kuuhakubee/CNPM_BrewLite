@@ -1,0 +1,179 @@
+@startuml sequence-checkout
+'==============================================================
+' BrewLite – Sequence diagram cho UC-07 "Đặt và thanh toán đơn hàng"
+' Lifelines: Khách hàng → Next.js UI → NestJS API → Database → Payment Service
+' Task 2.2 (Assignment 2)
+' Nguồn: docs/requirements/use-case-checkout.md
+'==============================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam sequence {
+  BackgroundColor #FFFFFF
+  BorderColor #2C3E50
+  FontColor #1B2631
+  LifeLineBorderColor #2C3E50
+  LifeLineBackgroundColor #FAFBFC
+  ArrowColor #2C3E50
+  ArrowFontColor #2C3E50
+  ParticipantBorderColor #2C3E50
+  ParticipantBackgroundColor #F5F7FA
+  ParticipantFontColor #1B2631
+  ActorBorderColor #1B2631
+  ActorBackgroundColor #2C3E50
+  ActorFontColor #FFFFFF
+  NoteBorderColor #B9770E
+  NoteBackgroundColor #FDEBD0
+  NoteFontColor #5D4037
+  BoxBorderColor #5D6D7E
+  BoxBackgroundColor #EAEDED
+  DividerBackgroundColor #EAEDED
+  DividerBorderColor #5D6D7E
+  GroupBackgroundColor #F5F7FA
+  GroupBorderColor #5D6D7E
+}
+autonumber
+
+actor "Khách hàng" as C
+participant "Next.js UI\n(PWA)" as UI
+participant "NestJS API" as API
+participant "Database\n(PostgreSQL)" as DB
+participant "Payment Service\n(mô phỏng)" as PG
+
+== 1. Xem menu ==
+C -> UI : Mở ứng dụng
+UI -> API : GET /products
+API -> DB : SELECT * FROM Product\nWHERE isAvailable = true
+DB --> API : Danh sách sản phẩm
+API --> UI : 200 OK [Product[]]
+UI --> C : Render lưới menu (mobile-first)
+
+== 2. Chọn sản phẩm, size & topping ==
+C -> UI : Bấm sản phẩm
+UI -> API : GET /products/:id
+API -> DB : SELECT Product + sizes + toppings
+DB --> API : Chi tiết sản phẩm
+API --> UI : 200 OK [Product]
+C -> UI : Chọn size (S/M/L), topping, qty
+UI -> UI : Tính unitPrice & lineTotal\n(base + size + Σtopping)
+C -> UI : Bấm "Thêm vào giỏ"
+UI -> UI : Ghi giỏ vào localStorage
+
+== 3. Kiểm tra đăng nhập ==
+C -> UI : Bấm "Đặt hàng"
+alt Chưa đăng nhập (thiếu/expired token)
+  UI -> API : GET /orders/me (probe)
+  API --> UI : 401 Unauthorized
+  UI --> C : Chuyển màn hình Đăng nhập\n(giữ nguyên giỏ hàng)
+  C -> UI : Nhập email & mật khẩu
+  UI -> API : POST /auth/login {email, password}
+  API -> DB : SELECT user theo email
+  DB --> API : user + passwordHash
+  API -> API : bcrypt.compare(password, hash)
+  API --> UI : 200 OK {accessToken: JWT}
+  UI --> C : Lưu token, quay lại giỏ hàng
+else Đã đăng nhập (token hợp lệ)
+  UI -> UI : Đọc accessToken từ storage
+end
+
+== 4. Tạo đơn (transaction + trừ tồn kho) ==
+C -> UI : Chọn phương thức (Ví / Thẻ)\n+ nhập mã khuyến mãi (nếu có)
+C -> UI : Bấm "Xác nhận thanh toán"
+UI -> API : POST /orders\n{items:[{productId,size,toppings,qty}], promoCode}\nAuthorization: Bearer <JWT>
+
+group API – Kiểm tra & transaction
+  API -> API : **JwtAuthGuard**: verify(chữ ký, exp)
+  alt Token không hợp lệ / hết hạn
+    API --> UI : 401 Unauthorized
+  else Token hợp lệ
+    API -> API : **class-validator**: qty ≥ 1, size ∈ {S,M,L},\nproductId tồn tại
+    alt Payload không hợp lệ
+      API --> UI : 400 Bad Request {message, errors[]}
+    else Payload hợp lệ
+      API -> DB : **BEGIN TRANSACTION**
+      API -> DB : SELECT ... FROM Product\nWHERE id IN (...) FOR UPDATE
+      DB --> API : Product {price, stock, version}
+
+      alt Tồn kho không đủ
+        API -> DB : ROLLBACK
+        API --> UI : 409 Conflict "… đã hết hàng"
+        UI --> C : Báo hết hàng, giữ nguyên giỏ
+      else Tồn kho đủ
+        API -> API : Tính lại total từ DB\n(bỏ qua giá client gửi)\n+ áp khuyến mãi nếu hợp lệ
+        API -> DB : INSERT Order {status: PENDING, total}
+        API -> DB : INSERT OrderItem × N
+        API -> DB : UPDATE Product SET stock = stock - qty,\nversion = version + 1\n(optimistic locking)
+        API -> DB : COMMIT
+        DB --> API : Order đã tạo
+        API --> UI : 201 Created\n{id, code "#1042", status PENDING, total}
+      end
+    end
+  end
+end
+
+== 5. Thanh toán (idempotent) ==
+UI -> UI : **idempotencyKey = crypto.randomUUID()**
+UI -> API : POST /payments\n{orderId, method, amount}\nIdempotency-Key: <uuid>
+
+group API – Thanh toán
+  API -> API : JwtAuthGuard + validate\n(order thuộc user, status = PENDING, amount = total)
+  API -> DB : SELECT * FROM Payment\nWHERE idempotencyKey = <uuid>
+
+  alt Idempotency-Key đã tồn tại (retry / double-click)
+    DB --> API : Payment cũ (SUCCESS)
+    API --> UI : 200 OK {idempotent: true, status: PAID, ...}
+    note right of API
+      Không tạo Payment mới
+      Không cộng điểm lần 2
+      Trả lại đúng kết quả lần trước
+    end note
+  else Key mới
+    API -> PG : POST /payment-gateway/charge\n{orderId, amount, method, idempotencyKey}
+    activate PG
+    PG -> PG : Xác thực & xử lý giao dịch\n(mô phỏng Momo/VNPay)
+    PG --> API : 200 {status: SUCCESS}
+    deactivate PG
+
+    alt Thanh toán thành công
+      API -> DB : BEGIN TRANSACTION
+      API -> DB : INSERT Payment {status: SUCCESS,\nidempotencyKey, method, amount}
+      API -> API : assertTransition(PENDING → PAID)
+      API -> DB : UPDATE User\nSET loyaltyPoints = loyaltyPoints + floor(total/1000)
+      API -> DB : INSERT LoyaltyTransaction {type: EARN}
+      API -> DB : INSERT OrderStatusHistory {PENDING → PAID}
+      API -> DB : COMMIT
+      API --> UI : 200 OK\n{paymentId, status: PAID, orderCode, loyaltyPointsEarned}
+    else Thanh toán thất bại
+      API -> DB : INSERT Payment {status: FAILED, reason}
+      API -> API : assertTransition(PENDING → PAYMENT_FAILED)
+      API -> DB : UPDATE Product\nSET stock = stock + qty (hoàn kho)
+      API --> UI : 402 Payment Required {message}
+      note right of API
+        KHÔNG cộng điểm thưởng
+        Giữ nguyên giỏ hàng
+        Cho phép thử lại
+      end note
+    end
+  end
+end
+
+== 6. Kết quả cuối cùng cho người dùng ==
+UI -> UI : Xóa giỏ hàng (localStorage)
+UI --> C : **Màn hình xác nhận đơn**\n#1042 · PAID · 123.000đ · Ví điện tử
+C -> UI : Bấm "Xem lịch sử đơn"
+UI -> API : GET /orders/me\nAuthorization: Bearer <JWT>
+API -> DB : SELECT Order + OrderItem\nWHERE userId = <sub trong token>\nORDER BY createdAt DESC
+DB --> API : Danh sách đơn
+API --> UI : 200 OK [Order[]]
+UI --> C : Render lịch sử đơn
+
+note over C, PG
+  **Luồng ngoại lệ đã bao phủ ở trên:**
+  • Token hết hạn → 401 → UI quay về Đăng nhập (giữ giỏ)
+  • Payload sai → 400 → UI hiển thị lỗi field
+  • Hết hàng → 409 → rollback, không trừ kho
+  • Thanh toán lỗi → 402 → PAYMENT_FAILED, giữ giỏ, cho thử lại
+  • Cổng thanh toán không phản hồi → 503 → PAYMENT_FAILED, không cộng điểm
+end note
+
+@enduml

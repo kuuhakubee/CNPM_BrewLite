@@ -1,0 +1,22 @@
+{
+  "name": "@brewlite/web",
+  "version": "0.1.0",
+  "description": "BrewLite – Frontend Next.js (App Router, standalone output)",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "start": "node server.js",
+    "start:dev": "next dev",
+    "lint": "eslint \"{src,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "next": "^15.1.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2"
+  }
+}

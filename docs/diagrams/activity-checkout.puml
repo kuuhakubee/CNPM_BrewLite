@@ -1,0 +1,238 @@
+@startuml activity-checkout
+'==============================================================
+' BrewLite – Activity diagram cho luồng end-to-end
+' "Xem menu → Chọn tùy chọn → Giỏ hàng → Đặt đơn → Thanh toán → Theo dõi đơn"
+' Task 2.1 (Assignment 2)
+' Nguồn: docs/requirements/use-case-checkout.md
+'==============================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam activity {
+  BackgroundColor #F5F7FA
+  BorderColor #2C3E50
+  FontColor #1B2631
+}
+skinparam swimlane {
+  BackgroundColor #FAFBFC
+  BorderColor #5D6D7E
+  FontStyle bold
+}
+skinparam ArrowColor #2C3E50
+skinparam ArrowFontColor #2C3E50
+
+|Khách hàng|
+start
+:Mở ứng dụng (PWA);
+
+|Next.js UI|
+:Hiển thị loading skeleton;
+:GET /products;
+
+|NestJS API|
+:Validate query & phân trang;
+
+|PostgreSQL|
+:Đọc danh sách sản phẩm\n(filter theo category, stock > 0);
+
+|NestJS API|
+:Trả JSON menu;
+
+|Next.js UI|
+if (Danh sách rỗng?) then (Có)
+  :Hiển thị empty state\n"Chưa có món nào";
+  stop
+else (Không)
+  :Render lưới sản phẩm\n(mobile-first);
+endif
+
+|Khách hàng|
+:Bấm vào 1 sản phẩm;
+
+|Next.js UI|
+:GET /products/:id;
+:Hiển thị chi tiết\n(tên, mô tả, ảnh, giá);
+
+|Khách hàng|
+:Chọn size (S/M/L)\n& topping (0..3);
+:Chọn số lượng;
+
+|Next.js UI|
+if (Đã chọn size?) then (Chưa)
+  :Disable nút "Thêm vào giỏ"\n+ nhắc chọn size;
+  stop
+else (Có)
+  :Tính giá\nunitPrice = base + size + Σtopping;
+  :lineTotal = unitPrice × qty;
+endif
+
+|Khách hàng|
+:Bấm "Thêm vào giỏ";
+
+|Next.js UI|
+:Thêm vào giỏ\n(gộp nếu cùng size+topping);
+:Cập nhật badge số lượng;
+:Lưu giỏ vào localStorage;
+
+|Khách hàng|
+:Bấm "Xem giỏ hàng";
+
+|Next.js UI|
+:Render giỏ hàng & tổng tiền;
+
+|Khách hàng|
+if (Muốn mua thêm?) then (Có)
+  :Quay lại menu;
+  |Next.js UI|
+  :Khôi phục lọc danh mục;
+  |Khách hàng|
+  -> "Chọn sản phẩm";
+else (Không)
+endif
+
+|Khách hàng|
+:Bấm "Đặt hàng";
+
+|Next.js UI|
+if (Đã đăng nhập?) then (Không)
+  :Chuyển tới màn hình\nĐăng nhập / Đăng ký\n(giữ nguyên giỏ hàng);
+  |Khách hàng|
+  :Nhập email & mật khẩu;
+  |Next.js UI|
+  :POST /auth/login;
+  |NestJS API|
+  :Verify bcrypt hash;
+  |PostgreSQL|
+  :Đọc user theo email;
+  |NestJS API|
+  :Ký & trả JWT;
+  |Next.js UI|
+  if (Đăng nhập thành công?) then (Không)
+    :Hiển thị lỗi\n"Email hoặc mật khẩu không đúng";
+    stop
+  else (Có)
+    :Lưu token\nquay lại màn hình giỏ;
+  endif
+else (Có)
+endif
+
+|Khách hàng|
+:Chọn phương thức thanh toán\n(Ví điện tử / Thẻ ngân hàng);
+:(Tùy chọn) Nhập mã khuyến mãi;
+
+|Next.js UI|
+:Bấm "Xác nhận thanh toán"\n→ POST /orders\n+ Authorization: Bearer <JWT>;
+
+|NestJS API|
+:JwtAuthGuard\nkiểm tra chữ ký & exp;
+if (Token hợp lệ?) then (Không)
+  :Trả 401 Unauthorized;
+  |Next.js UI|
+  :Xóa token, quay về Đăng nhập\n(giữ giỏ hàng);
+  stop
+else (Có)
+  :class-validator\nkiểm tra body đơn;
+  if (Payload hợp lệ?) then (Không)
+    :Trả 400 Bad Request\n(kèm chi tiết lỗi);
+    stop
+  else (Có)
+  endif
+endif
+
+|NestJS API|
+:BẮT ĐẦU TRANSACTION;
+:Tính lại giá từ DB\n(bỏ qua giá client gửi);
+:Áp dụng khuyến mãi nếu hợp lệ;
+
+|PostgreSQL|
+:Khóa & đọc Product\n(kiểm tra tồn kho, version);
+if (Tồn kho đủ\ncho mọi dòng?) then (Không)
+  :ROLLBACK;
+  |NestJS API|
+  :Trả 409 Conflict\n"… đã hết hàng";
+  |Next.js UI|
+  :Hiển thị lỗi hết hàng,\ngiữ nguyên giỏ hàng;
+  stop
+else (Có)
+  :INSERT Order (PENDING)\n+ OrderItem;
+  :UPDATE Product.stock\n(optimistic locking);
+  :COMMIT;
+endif
+
+|NestJS API|
+:Trả 201 Created\n{id, code "#1042", status PENDING, total};
+
+|Next.js UI|
+:Tạo Idempotency-Key (UUID);
+:POST /payments\n{orderId, method, amount}\n+ Idempotency-Key;
+
+|NestJS API|
+:JwtAuthGuard;
+:Kiểm tra key đã tồn tại?;
+if (Key đã tồn tại?) then (Có)
+  :Trả kết quả cũ\n(200, idempotent=true)\nkhông ghi giao dịch mới;
+  |Next.js UI|
+  -> "Hiển thị xác nhận đơn";
+else (Không)
+  :Kiểm tra đơn thuộc user\nvà status = PENDING;
+  if (Đơn hợp lệ?) then (Không)
+    :Trả 403 / 409;
+    stop
+  else (Có)
+    :Gọi cổng thanh toán\nPOST /payment-gateway/charge;
+  endif
+endif
+
+|Payment Service|
+:Xác thực & xử lý giao dịch\n(mô phỏng: 90% thành công);
+:Trả kết quả\nSUCCESS / FAILED;
+
+|NestJS API|
+if (Thanh toán thành công?) then (Không)
+  :INSERT Payment (FAILED);
+  :assertTransition\nPENDING → PAYMENT_FAILED;
+  :Hoàn lại tồn kho;
+  :KHÔNG cộng điểm thưởng;
+  :Trả 402 Payment Required\n(lý do thân thiện);
+  |Next.js UI|
+  :Hiển thị lỗi thanh toán\n**giữ nguyên giỏ hàng**;
+  :Nút "Thử lại thanh toán";
+  |Khách hàng|
+  -> "Chọn phương thức thanh toán";
+else (Có)
+  :INSERT Payment (SUCCESS);
+  :assertTransition\nPENDING → PAID;
+  :Cộng loyaltyPoints\n= floor(total/1000);
+  :INSERT LoyaltyTransaction (EARN);
+  :Ghi log chuyển trạng thái;
+  :Trả 200 {paymentId, status PAID,\norderCode, loyaltyPointsEarned};
+endif
+
+|Next.js UI|
+:Xóa giỏ hàng khỏi localStorage;
+:Hiển thị màn hình XÁC NHẬN ĐƠN\n(mã đơn #1042, trạng thái PAID,\ntổng tiền, phương thức thanh toán);
+
+|Khách hàng|
+:Xem đơn vừa đặt;
+
+|Next.js UI|
+:GET /orders/me;
+
+|NestJS API|
+:Đọc đơn của user\n(mới nhất trước);
+
+|PostgreSQL|
+:Query Order + OrderItem\ncủa user trong token;
+
+|NestJS API|
+:Trả danh sách đơn\n(mã đơn, tổng, trạng thái, thời gian);
+
+|Next.js UI|
+:Render lịch sử đơn;
+
+|Khách hàng|
+:Nhận đồ uống tại quầy;
+
+stop
+
+@enduml

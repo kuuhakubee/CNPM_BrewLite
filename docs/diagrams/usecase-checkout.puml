@@ -1,0 +1,82 @@
+@startuml usecase-checkout
+'==============================================================
+' BrewLite – Sơ đồ use-case cho phạm vi UC-07
+' "Đặt và thanh toán đơn hàng"
+' Task 1.3 (Assignment 2)
+' Nguồn: docs/requirements/use-case-checkout.md
+'==============================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam usecase {
+  BackgroundColor #F5F7FA
+  BorderColor #2C3E50
+  ArrowColor #2C3E50
+  FontColor #1B2631
+}
+skinparam actor {
+  BackgroundColor #2C3E50
+  BorderColor #1B2631
+  FontColor #FFFFFF
+}
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #2C3E50
+  FontStyle bold
+}
+skinparam stereotype {
+  BackgroundColor #FDEBD0
+  BorderColor #B9770E
+}
+
+left to right direction
+
+actor "Khách hàng" as Customer
+actor "Hệ thống thanh toán\n(mô phỏng)" as PayGW
+
+rectangle "BrewLite – phạm vi UC-07" {
+  usecase "Đặt và thanh toán\nđơn hàng\n<<focus>>" as UC07 <<focus>>
+
+  usecase "Xác thực\nngười dùng (JWT)" as UCAuth
+  usecase "Quản lý\ngiỏ hàng" as UCCart
+  usecase "Kiểm tra\ntồn kho" as UCStock
+  usecase "Tính & áp dụng\nkhuyến mãi" as UCPromo
+  usecase "Ghi nhận điểm\nthưởng loyalty" as UCLoyalty
+  usecase "Ghi log chuyển\ntrạng thái đơn" as UCStateLog
+
+  usecase "Thanh toán\n(Ví / Thẻ)" as UCPay
+  usecase "Xem xác nhận\nđơn hàng" as UCConfirm
+}
+
+Customer --> UC07
+Customer --> UCCart
+Customer --> UCConfirm
+
+UC07 ..> UCAuth : <<include>>
+UC07 ..> UCCart : <<include>>
+UC07 ..> UCStock : <<include>>
+UC07 ..> UCPay : <<include>>\n(kèm Idempotency-Key)
+UC07 ..> UCPromo : <<extend>>\n(nhập mã giảm giá)
+UC07 ..> UCLoyalty : <<extend>>\n(sau khi đơn PAID)
+UC07 ..> UCStateLog : <<include>>
+
+UCPay --> PayGW : gọi cổng thanh toán
+
+note right of UC07
+  **Điều kiện trước:**
+  • Đã đăng nhập (JWT hợp lệ)
+  • Giỏ hàng có ≥ 1 dòng hợp lệ
+  • Mỗi dòng có productId, size, qty ≥ 1
+end note
+
+note bottom of UCPay
+  *Lỗi:* đơn → PAYMENT_FAILED,
+  giữ nguyên giỏ hàng, cho phép thử lại
+end note
+
+note bottom of UCLoyalty
+  Điểm = floor(order.total / 1000),
+  chỉ cộng 1 lần (idempotent)
+end note
+
+@enduml
