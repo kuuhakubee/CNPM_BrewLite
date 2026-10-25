@@ -250,9 +250,6 @@ The API will start, expose `GET /health`, and accept the usual endpoints
   DTOs coerce them to `number` for JSON serialization.
 - **Idempotency via `Payment.idempotencyKey UNIQUE`** — guaranteed by the database, not
   application logic (ADR-004). The seed is also idempotent (upsert by unique keys).
-- **Sudo password** — your local `sang` account uses `Aa123456`. This file (`README.md`)
-  does **not** contain that password; it remains on your local machine only. The DB
-  password (`change-me-local`) is stored in `.env` files which are gitignored.
 - **CI gate** — once you `docker compose up --build`, you can verify the quality gate:
   ```bash
   cd apps/api && npm run build   # ✅

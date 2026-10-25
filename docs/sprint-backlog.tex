@@ -1,0 +1,141 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\geometry{a4paper, margin=2cm}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{booktabs}
+
+\title{\textbf{BrewLite -- Kế hoạch Sprint (Sprint Backlog)}}
+\author{Nhóm BrewLite}
+\date{Học kỳ Thu 2026}
+
+\begin{document}
+\maketitle
+
+\section{Tổng quan}
+Tài liệu này là \textbf{Kế hoạch Sprint} (Sprint Backlog) cho dự án BrewLite, dựa trên các yêu cầu của \textbf{Bài tập lớn 2 -- BrewLite -- Phiên bản 1.0} (Môn Công nghệ phần mềm, học kỳ I -- năm học 2026-2027).
+
+Dự án xây dựng hệ thống đặt món cà phê (không tiền mặt, ưu tiên thiết bị di động/PWA) với:
+frontend sử dụng Next.js, backend sử dụng NestJS, cơ sở dữ liệu PostgreSQL, cổng thanh toán giả lập (mock payment gateway).
+
+Luồng nghiệp vụ khả thi tối thiểu (MVP):
+\begin{center}
+\texttt{Xem menu -> Chọn tùy chọn -> Giỏ hàng -> Đặt đơn -> Thanh toán -> Theo dõi đơn}
+\end{center}
+
+\section{Sprint 1}
+\label{sec:sprint1}
+
+\subsection{Mục tiêu Sprint}
+\textbf{Nền tảng \& Hiển thị thực đơn} -- Xây dựng nền tảng cơ bản và hiển thị thực đơn.
+
+\subsection{Các công việc được giao cho Sprint 1}
+\begin{itemize}
+  \item Nhiệm vụ 1 -- Khảo sát và đặc tả yêu cầu (ngữ cảnh/phạm vi, tài liệu SRS, sơ đồ use-case).
+  \item Nhiệm vụ 2 -- Mô hình hóa hệ thống (sơ đồ hoạt động, sơ đồ tuần tự, sơ đồ lớp).
+  \item Nhiệm vụ 3 -- Thiết kế kỹ thuật (C4, quyết định kiến trúc ADR, sơ đồ triển khai).
+  \item Nhiệm vụ 4 -- Triển khai Sprint 1 (khởi tạo kho mã nguồn, tài liệu, menu MVP, kiểm thử liên tục CI).
+\end{itemize}
+
+\subsection{Danh mục công việc và sản phẩm bàn giao trong Sprint Backlog}
+\begin{enumerate}
+  \item \textbf{Nhiệm vụ 1} -- Tài liệu yêu cầu:
+  \begin{itemize}
+    \item Ngữ cảnh và phạm vi (các bên liên quan, phạm vi trong/ngoài dự án, các giả định).
+    \item Tài liệu SRS (FR-01..FR-16, NFR-01..NFR-08, mô hình MoSCoW, tiêu chí nghiệm thu).
+    \item Use-case UC-07 -- Đặt và thanh toán đơn hàng.
+  \end{itemize}
+  \item \textbf{Nhiệm vụ 2} -- Tài liệu mô hình hóa:
+  \begin{itemize}
+    \item Sơ đồ hoạt động (Activity diagram) cho toàn bộ luồng nghiệp vụ.
+    \item Sơ đồ tuần tự (Sequence diagram) cho UC-07 (JWT, giao dịch, tính idempotency, thanh toán).
+    \item Sơ đồ lớp (Class diagram: User, Product, Order, OrderItem, Payment, Promotion, LoyaltyTransaction).
+  \end{itemize}
+  \item \textbf{Nhiệm vụ 3} -- Tài liệu kiến trúc:
+  \begin{itemize}
+    \item Mô hình C4 (Context / Container / Component).
+    \item Các tài liệu quyết định kiến trúc ADR 001--006.
+    \item Sơ đồ triển khai cho môi trường sản xuất (Render).
+  \end{itemize}
+  \item \textbf{Nhiệm vụ 4} -- Kỹ thuật Sprint 1:
+  \begin{itemize}
+    \item Monorepo gồm apps/web + apps/api + tài liệu.
+    \item NestJS: GET /products, GET /products/:id, module Kiểm tra hệ thống (Health).
+    \item Giao diện menu Next.js (ưu tiên di động, trạng thái tải/trống/lỗi).
+    \item Lược đồ Prisma, tập lệnh di chuyển cơ sở dữ liệu (migration) và dữ liệu mẫu (seed).
+    \item Cổng chất lượng CI (Cài đặt -> Kiểm tra lỗi cú pháp -> Chạy Unit Test -> Xây dựng bản dựng).
+  \end{itemize}
+\end{enumerate}
+
+\subsection{Tiêu chí nghiệm thu Sprint 1 (Tóm tắt)}
+\begin{itemize}
+  \item Hoàn thành đầy đủ các yêu cầu, sơ đồ, tài liệu ADR, v.v. lên kho mã nguồn.
+  \item Mô hình hóa không có điểm mâu thuẫn với tài liệu SRS.
+  \item Bản mẫu MVP chạy được luồng "xem menu".
+\end{itemize}
+
+\section{Sprint 2}
+\label{sec:sprint2}
+
+\subsection{Mục tiêu Sprint}
+\textbf{Giỏ hàng, Đặt đơn \& Đăng nhập} / \textbf{Thanh toán, Bàn giao \& Nghiệp vụ nâng cao}.
+
+\subsection{Các công việc được giao cho Sprint 2}
+\begin{itemize}
+  \item Nhiệm vụ 5 -- Hoàn thiện MVP (chi tiết sản phẩm, kích thước/topping, giỏ hàng, xác thực JWT, đặt đơn, thanh toán ví/thẻ giả lập, xác nhận/trạng thái/lịch sử, xử lý lỗi và kiểm tra dữ liệu).
+  \item Nhiệm vụ 6 -- Tích hợp và kiểm thử (unit test, integration test, E2E, docker-compose với 3 dịch vụ, endpoint kiểm tra sức khỏe hệ thống).
+  \item Nhiệm vụ 7 -- Triển khai liên tục CD \& Bàn giao (pipeline CD, di chuyển CSDL an toàn, triển khai, kiểm thử khói, bàn giao).
+\end{itemize}
+
+\subsection{Danh mục công việc và sản phẩm bàn giao trong Sprint Backlog}
+\begin{enumerate}
+  \item \textbf{Các tính năng MVP}: giỏ hàng (Zustand + localStorage), đặt hàng (POST /orders), thanh toán (POST /payments + cổng thanh toán giả lập, tính đảm bảo idempotency), xác nhận và lịch sử đơn hàng (GET /orders/me).
+  \item \textbf{Kiểm thử}: unit test cho nghiệp vụ (máy trạng thái, tính giá, idempotency, khuyến mại, điểm tích lũy); integration test cho quy trình đặt đơn/thanh toán; kiểm thử E2E từ menu đến xác nhận.
+  \item \textbf{CD}: Pipeline đẩy mã/gắn thẻ (Push/Tag) -> Kiểm tra lỗi \& Test -> Xây dựng -> Đẩy hình ảnh Docker lên Registry -> Triển khai -> Kiểm thử khói; chạy di chuyển CSDL an toàn; cơ chế khôi phục (rollback).
+\end{enumerate}
+
+\section{Sprint 3}
+\label{sec:sprint3}
+
+\subsection{Mục tiêu Sprint}
+\textbf{Nghiệp vụ backend nâng cao \& Bàn giao hoàn chỉnh}.
+
+\subsection{Các công việc được giao cho Sprint 3}
+\begin{itemize}
+  \item Nhiệm vụ 8 -- Thanh toán không tiền mặt (cổng thanh toán giả lập: Ví/Thẻ, cơ chế idempotency, xử lý lỗi \texttt{PAYMENT\_FAILED}).
+  \item Nhiệm vụ 9 -- Xác nhận, lịch sử đơn hàng \& Bàn giao (docker-compose chính thức, file README hướng dẫn, bản demo E2E).
+  \item Nhiệm vụ 10 -- Nghiệp vụ backend chuyên sâu (Máy trạng thái đơn hàng, idempotency, khóa tồn kho, khuyến mại/điểm thưởng).
+\end{itemize}
+
+\subsection{Danh mục công việc và sản phẩm bàn giao trong Sprint Backlog}
+\begin{itemize}
+  \item Logic nghiệp vụ backend: Máy trạng thái chuyển đổi \texttt{PENDING -> PAID -> PREPARING -> READY -> COMPLETED}, hoặc \texttt{PENDING -> PAYMENT\_FAILED -> PAID}, và \texttt{CANCELLED}.
+  \item Ràng buộc khóa duy nhất \texttt{Idempotency-Key UNIQUE} cho bảng Thanh toán.
+  \item Khóa lạc quan (\texttt{Product.version}) dùng cho quản lý kho hàng.
+  \item Điểm tích lũy thành viên (\texttt{floor(total / 1000)}) kết hợp xử lý mã khuyến mại.
+\end{itemize}
+
+\section{Bảng tổng hợp Sprint}
+
+\begin{longtable}{p{3cm} p{3.5cm} p{4.5cm}}
+\toprule
+\textbf{Sprint} & \textbf{Mục tiêu} & \textbf{Công việc / Trọng tâm} \\
+\midrule
+Sprint 1 & Nền tảng \& Hiển thị thực đơn & Nhiệm vụ 1, 2, 3, 4 (Yêu cầu, Mô hình hóa, Kỹ thuật, Menu MVP) \\
+Sprint 2 & Giỏ hàng, Đặt đơn, Đăng nhập / Thanh toán, Bàn giao \& Nghiệp vụ nâng cao & Nhiệm vụ 5, 6, 7 (Hoàn thiện MVP, Tích hợp/Kiểm thử, CD/Triển khai/Bàn giao) \\
+Sprint 3 & Nghiệp vụ backend \& Bàn giao & Nhiệm vụ 8, 9, 10 (Thanh toán, Xác nhận/Lịch sử/Bàn giao, Máy trạng thái/Idempotency/Tồn kho) \\
+\bottomrule
+\end{longtable}
+
+\section{Tiêu chí hoàn thành (Definition of Done - tóm tắt)}
+\begin{itemize}
+  \item Mã nguồn chạy được, không lỗi build; tuân thủ toàn bộ các tiêu chuẩn của dự án.
+  \item Có commit trên Git với mô tả rõ ràng, minh bạch.
+  \item API có kiểm tra tính hợp lệ dữ liệu (validate); giao diện xử lý tốt trạng thái tải (loading) và lỗi (error).
+  \item Có hướng dẫn chạy ứng dụng đầy đủ trong tệp README.
+\end{itemize}
+
+\end{document}
