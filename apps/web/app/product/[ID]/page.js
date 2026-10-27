@@ -91,7 +91,7 @@ function OptionBtn({ selected, onClick, children }) {
         fontWeight: selected ? 600 : 400,
         fontSize: "14px",
         cursor: "pointer",
-        fontFamily: "Inter, sans-serif",
+        fontFamily: "var(--font-inter), sans-serif",
         transition: "all 0.15s",
       }}
     >
@@ -110,7 +110,7 @@ function OptionGroup({ label, children }) {
           fontSize: "14px",
           fontWeight: 600,
           color: C.text,
-          fontFamily: "Inter, sans-serif",
+          fontFamily: "var(--font-inter), sans-serif",
           lineHeight: "21.7px",
         }}
       >
@@ -196,7 +196,7 @@ export default function ProductDetail({ params }) {
   return (
     <div
       style={{
-        fontFamily: "Inter, sans-serif",
+        fontFamily: "var(--font-inter), sans-serif",
         background: C.bg,
         minHeight: "100vh",
         display: "flex",
@@ -248,7 +248,7 @@ export default function ProductDetail({ params }) {
           </svg>
           <span
             style={{
-              fontFamily: "Noto Serif, Georgia, serif",
+              fontFamily: "var(--font-serif), Georgia, serif",
               fontSize: "29px",
               fontWeight: 600,
               color: C.text,
@@ -382,7 +382,7 @@ export default function ProductDetail({ params }) {
             <p
               style={{
                 margin: 0,
-                fontFamily: "Noto Serif, Georgia, serif",
+                fontFamily: "var(--font-serif), Georgia, serif",
                 fontSize: "25px",
                 fontWeight: 500,
                 color: C.text,
@@ -437,7 +437,7 @@ export default function ProductDetail({ params }) {
             <h1
               style={{
                 margin: 0,
-                fontFamily: "Noto Serif, Georgia, serif",
+                fontFamily: "var(--font-serif), Georgia, serif",
                 fontSize: "40px",
                 fontWeight: 500,
                 color: C.text,
