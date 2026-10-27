@@ -1,9 +1,10 @@
 {
   "name": "@brewlite/web",
   "version": "0.1.0",
-  "description": "BrewLite – Frontend Next.js (App Router, standalone output)",
+  "description": "BrewLite - Frontend Next.js (App Router, standalone output)",
   "private": true,
   "scripts": {
+    "dev": "next dev",
     "build": "next build",
     "start": "node server.js",
     "start:dev": "next dev",
