@@ -3,6 +3,7 @@
 import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import TopBanner from './TopBanner';
 import CheckoutStepper from '../checkout/CheckoutStepper';
 import { AuthProvider, useAuth } from '../../context/AuthContext';
 import { CartProvider, useCart } from '../../context/CartContext';
@@ -25,25 +26,23 @@ function LayoutInner({ children }) {
         logout();
       }
     } else {
-      // Chuyển sang phần đăng nhập, đặt Tài khoản làm bước đầu tiên trong stepper
       startAuthFlow();
     }
   };
 
   const handleCartClick = () => {
-    // Chuyển sang phần giỏ hàng, đặt Giỏ hàng làm bước đầu tiên trong stepper
     startCartFlow();
   };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <TopBanner />
       <Header
         cartCount={displayCartCount}
         authButtonText={displayAuthName}
         onAuthClick={handleAuthClick}
         onCartClick={handleCartClick}
       />
-      {/* Thanh tiến trình tự động ẩn/hiện và hoán đổi linh hoạt */}
       <CheckoutStepper />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
