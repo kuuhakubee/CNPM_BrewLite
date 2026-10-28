@@ -3,7 +3,7 @@ import AppLayout from '../components/layout/AppLayout';
 
 export const metadata = {
   title: 'BrewLite – Cà phê chuẩn vị, đặt trước nhận ngay',
-  description: 'Bản thiết kế MVP BrewLite - Nhận tại quầy, thanh toán mẫu không phát sinh giao dịch.',
+  description: 'BrewLite – Đặt cà phê trước, nhận tại quầy tiện lợi và nhanh chóng.',
 };
 
 export default function RootLayout({ children }) {

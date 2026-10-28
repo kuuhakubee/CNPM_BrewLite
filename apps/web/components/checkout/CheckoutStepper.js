@@ -1,59 +1,100 @@
+'use client';
+
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import styles from './CheckoutStepper.module.css';
+import { useCheckout } from '../../context/CheckoutContext';
 
-const STEPS = [
-  { id: 1, label: 'Giỏ hàng' },
-  { id: 2, label: 'Tài khoản' },
-  { id: 3, label: 'Thanh toán' },
-  { id: 4, label: 'Xác nhận' },
-];
+export default function CheckoutStepper() {
+  const pathname = usePathname();
+  const { stepperVisible, getSteps, navigateToStep } = useCheckout();
 
-export default function CheckoutStepper({ currentStep = 2 }) {
+  // 1. Ẩn thanh tiến trình nếu chưa kích hoạt từ Giỏ hàng hoặc Đăng nhập
+  if (!stepperVisible) {
+    return null;
+  }
+
+  // Lấy danh sách 4 bước theo thứ tự linh hoạt (Giỏ hàng trước hoặc Tài khoản trước)
+  const steps = getSteps();
+
+  // Xác định bước hiện tại dựa theo đường dẫn URL
+  const getCurrentKey = () => {
+    if (pathname?.includes('/confirmation')) return 'confirmation';
+    if (pathname?.includes('/payment')) return 'payment';
+    if (pathname?.includes('/account') || pathname === '/login' || pathname === '/register') return 'account';
+    if (pathname?.includes('/cart')) return 'cart';
+    return steps[0]?.key || 'cart';
+  };
+
+  const currentKey = getCurrentKey();
+  const currentIndex = steps.findIndex((s) => s.key === currentKey);
+
   return (
-    <section className={styles.stepperSection}>
+    <nav className={styles.stepperSection} aria-label="Tiến trình đặt hàng">
       <div className={styles.stepperContainer}>
-        {STEPS.map((step, index) => {
-          const isCompleted = step.id < currentStep;
-          const isActive = step.id === currentStep;
+        {steps.map((step, index) => {
+          const isActive = step.key === currentKey;
+          const isPassed = step.isCompleted && !isActive;
 
           return (
-            <React.Fragment key={step.id}>
-              <div className={styles.stepItem}>
+            <React.Fragment key={step.key}>
+              <button
+                type="button"
+                onClick={() => navigateToStep(step.key)}
+                className={`${styles.stepItem} ${isActive ? styles.stepItemActive : ''}`}
+                title={`Bước ${index + 1}: ${step.label}`}
+              >
                 <div
                   className={`${styles.stepCircle} ${
-                    isCompleted
+                    isPassed
                       ? styles.completedCircle
                       : isActive
                       ? styles.activeCircle
                       : styles.pendingCircle
                   }`}
                 >
-                  {isCompleted ? (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  {isPassed ? (
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="2.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   ) : (
-                    <span>{step.id}</span>
+                    <span>{index + 1}</span>
                   )}
                 </div>
+
                 <span
                   className={`${styles.stepLabel} ${
-                    isCompleted
-                      ? styles.completedLabel
-                      : isActive
+                    isActive
                       ? styles.activeLabel
+                      : isPassed
+                      ? styles.completedLabel
                       : styles.pendingLabel
                   }`}
                 >
                   {step.label}
                 </span>
-              </div>
+              </button>
 
-              {index < STEPS.length - 1 && <div className={styles.stepConnector} />}
+              {index < steps.length - 1 && (
+                <div
+                  className={`${styles.stepConnector} ${
+                    index < currentIndex ? styles.stepConnectorActive : ''
+                  }`}
+                />
+              )}
             </React.Fragment>
           );
         })}
       </div>
-    </section>
+    </nav>
   );
 }
