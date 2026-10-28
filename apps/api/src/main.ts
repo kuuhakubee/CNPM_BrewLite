@@ -6,8 +6,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Global prefix theo kiến trúc: mọi endpoint nghiệp vụ nằm dưới /api/v1
-  // (GET /health nằm ngoài prefix – xem HealthModule.setGlobalPrefix(false))
-  app.setGlobalPrefix('api/v1', { exclude: ['health'] });
+  // Exclude health và auth để truy cập trực tiếp /health, /auth/register, /auth/login
+  app.setGlobalPrefix('api/v1', { exclude: ['health', 'auth', 'auth/(.*)'] });
 
   // CORS – cho phép web (Next.js) gọi API. Ở production giới hạn bằng origin thật.
   app.enableCors({
