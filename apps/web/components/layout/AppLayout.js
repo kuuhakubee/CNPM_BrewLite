@@ -3,6 +3,7 @@
 import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import TopBanner from './TopBanner';
 import { AuthProvider, useAuth } from '../../context/AuthContext';
 import { CartProvider, useCart } from '../../context/CartContext';
 import { useRouter } from 'next/navigation';
@@ -24,6 +25,7 @@ function LayoutInner({ children }) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <TopBanner />
       <Header
         cartCount={itemCount}
         authButtonText={user ? user.name : 'Đăng nhập'}

@@ -23,7 +23,7 @@ export default function Header({
 
         {/* Navigation items */}
         <nav className={styles.navLinks}>
-          <a href="#menu" className={styles.navLink}>Thực đơn</a>
+          <a href="/" className={styles.navLink}>Thực đơn</a>
           <a href="#stores" className={styles.navLink}>Cửa hàng</a>
           <a href="#history" className={styles.navLink}>Lịch sử đơn</a>
         </nav>
