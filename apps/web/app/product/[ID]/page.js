@@ -1,4 +1,3 @@
-// apps/web/app/product/[id]/page.js
 "use client";
 
 import { useEffect, useState } from "react";
@@ -35,8 +34,7 @@ const MOCK_PRODUCT = {
   tagline: "Đậm một chút, êm thật lâu.",
   description:
     "Espresso thơm hương hạt hòa cùng sữa mịn. Chọn sữa yến mạch để thêm vị béo dịu và hậu vị ngọt tự nhiên.",
-  allergyNote:
-    "Có thể chứa sữa và yến mạch. Vui lòng kiểm tra trước khi đặt.",
+  allergyNote: "Có thể chứa sữa và yến mạch. Vui lòng kiểm tra trước khi đặt.",
   sizes: [
     { code: "S", label: "S · +0 VNĐ", priceDelta: 0 },
     { code: "M", label: "M · +6.000 VNĐ", priceDelta: 6000 },
@@ -76,7 +74,7 @@ function calcPerCup(product, sizeCode, selectedToppings) {
   return product.basePrice + (size?.priceDelta || 0) + toppingTotal;
 }
 
-// ─── Option Button ────────────────────────────────────────────
+// ─── Option Button ────────────────────────────────____________
 function OptionBtn({ selected, onClick, children }) {
   return (
     <button
@@ -124,7 +122,12 @@ function OptionGroup({ label, children }) {
 function Divider() {
   return (
     <div
-      style={{ width: "100%", height: "1px", background: C.border, margin: "0" }}
+      style={{
+        width: "100%",
+        height: "1px",
+        background: C.border,
+        margin: "0",
+      }}
     />
   );
 }
@@ -149,7 +152,7 @@ export default function ProductDetail({ params }) {
           setProduct(MOCK_PRODUCT);
         } else {
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${id}`
+            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${id}`,
           );
           if (!res.ok) throw new Error("Network error");
           const data = await res.json();
@@ -172,21 +175,21 @@ export default function ProductDetail({ params }) {
     setSelectedToppings((prev) =>
       prev.includes(toppingId)
         ? prev.filter((i) => i !== toppingId)
-        : [...prev, toppingId]
+        : [...prev, toppingId],
     );
   };
 
-  if (loading) return <p style={{ padding: "3rem", textAlign: "center" }}>Đang tải...</p>;
-  if (error) return <p style={{ padding: "3rem", color: "red", textAlign: "center" }}>Lỗi: {error}</p>;
+  if (loading) return <p style={{ padding: "3rem", textAlign: "center", fontFamily: "Inter, sans-serif" }}>Đang tải...</p>;
+  if (error) return <p style={{ padding: "3rem", color: "red", textAlign: "center", fontFamily: "Inter, sans-serif" }}>Lỗi: {error}</p>;
   if (!product) return null;
 
   const pricePerCup = calcPerCup(product, sizeCode, selectedToppings);
   const totalPrice = pricePerCup * qty;
 
-  // Breakdown string: 49.000 + 6.000 + 10.000 VNĐ
   const selectedSize = product.sizes.find((s) => s.code === sizeCode);
   const breakdownParts = [fmtShort(product.basePrice)];
-  if (selectedSize?.priceDelta > 0) breakdownParts.push(fmtShort(selectedSize.priceDelta));
+  if (selectedSize?.priceDelta > 0)
+    breakdownParts.push(fmtShort(selectedSize.priceDelta));
   product.toppings
     .filter((t) => selectedToppings.includes(t.id))
     .forEach((t) => breakdownParts.push(fmtShort(t.price)));
@@ -212,6 +215,7 @@ export default function ProductDetail({ params }) {
 
       {/* Two-column layout */}
       <div style={{ display: "flex", gap: "64px", alignItems: "flex-start", flexWrap: "wrap" }}>
+        
         {/* ── Left: Product Story ── */}
         <div
           style={{
@@ -416,7 +420,6 @@ export default function ProductDetail({ params }) {
                     transition: "all 0.15s",
                   }}
                 >
-                  {/* Custom checkbox */}
                   <div
                     style={{
                       width: "18px",
@@ -468,7 +471,6 @@ export default function ProductDetail({ params }) {
 
           {/* Quantity + price per cup */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            {/* Quantity control */}
             <div
               style={{
                 display: "flex",
@@ -528,7 +530,6 @@ export default function ProductDetail({ params }) {
               </button>
             </div>
 
-            {/* Price per cup */}
             <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "right" }}>
               <span
                 style={{
@@ -540,55 +541,20 @@ export default function ProductDetail({ params }) {
               >
                 {fmt(pricePerCup)} / ly
               </span>
-              <span style={{ fontSize: "11px", color: C.textMuted, lineHeight: "17px" }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: C.textMuted,
+                  lineHeight: "17px",
+                }}
+              >
                 {breakdown}
               </span>
             </div>
           </div>
 
-          {/* Add to cart button */}
-          <button
-            onClick={() =>
-              alert(`Đã thêm ${qty} ly ${product.name} vào giỏ hàng!`)
-            }
-            style={{
-              width: "100%",
-              height: "50px",
-              background: C.primary,
-              border: `1px solid ${C.primary}`,
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "12px",
-              cursor: "pointer",
-              transition: "opacity 0.15s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-          >
-            <span
-              style={{
-                fontSize: "15px",
-                fontWeight: 600,
-                color: "#ffffff",
-                lineHeight: "18.2px",
-              }}
-            >
-              Thêm {qty} ly vào giỏ &nbsp;·&nbsp; {fmt(totalPrice)}
-            </span>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="3" y1="6" x2="21" y2="6" stroke="#fff" strokeWidth="1.5"/>
-              <path d="M16 10a4 4 0 01-8 0" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-
-          {/* Note */}
-          <p style={{ margin: 0, fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}>
-            Bạn có thể thay đổi tùy chọn trong giỏ hàng trước khi thanh toán.
-          </p>
         </div>
+
       </div>
     </div>
   );

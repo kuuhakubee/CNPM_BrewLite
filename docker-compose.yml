@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. Cơ sở dữ liệu PostgreSQL
   postgres:
@@ -37,6 +35,7 @@ services:
       - PAYMENT_PROVIDER=${PAYMENT_PROVIDER:-mock}
     ports:
       - "4000:4000"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && node dist/main.js"
     depends_on:
       postgres:
         condition: service_healthy

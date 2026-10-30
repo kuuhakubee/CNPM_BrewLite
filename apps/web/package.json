@@ -7,7 +7,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "node server.js",
-    "dev": "next dev",
     "start:dev": "next dev",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "jest",
