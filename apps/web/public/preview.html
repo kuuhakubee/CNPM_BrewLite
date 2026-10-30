@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BrewLite – Cà phê chuẩn vị, đặt trước nhận ngay</title>
+  <title>BrewLite â€“ CĂ  phĂª chuáº©n vá»‹, Ä‘áº·t trÆ°á»›c nháº­n ngay</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -99,6 +99,10 @@
       cursor: pointer;
       padding: 6px 12px;
       border-radius: 8px;
+      transition: background-color 0.15s;
+    }
+    .login-btn:hover {
+      background-color: rgba(30, 56, 43, 0.06);
     }
     .cart-pill {
       display: flex;
@@ -110,13 +114,82 @@
       border-radius: 10px;
       font-size: 14px;
       font-weight: 600;
-      user-select: none;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .cart-pill:hover {
+      opacity: 0.9;
+    }
+
+    /* STEPPER */
+    .stepper-section {
+      padding: 24px 32px 16px;
+      transition: all 0.25s ease;
+    }
+    .stepper-container {
+      max-width: 1240px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+    .step-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .step-circle.completed {
+      background-color: var(--brand-forest);
+      color: #fff;
+    }
+    .step-circle.active {
+      background-color: var(--brand-forest);
+      color: #fff;
+      font-weight: 700;
+    }
+    .step-circle.pending {
+      background-color: #e6e4dc;
+      color: #768078;
+      font-weight: 600;
+    }
+    .step-label {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #768078;
+    }
+    .step-label.completed {
+      color: #49534c;
+      font-weight: 600;
+    }
+    .step-label.active {
+      font-weight: 700;
+      color: var(--brand-forest);
+    }
+    .step-connector {
+      width: 36px;
+      height: 1px;
+      background-color: #d8deda;
     }
 
     /* MAIN LAYOUT */
     .main-content {
       flex: 1;
-      padding: 36px 32px 56px;
+      padding: 32px 32px 56px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -405,6 +478,15 @@
       text-decoration: underline;
     }
 
+    /* CART & OTHER VIEWS (MINIMAL IN PREVIEW) */
+    .view-card-simple {
+      background-color: #fff;
+      border-radius: 16px;
+      padding: 32px;
+      border: 1px solid #e3e7e4;
+      text-align: center;
+    }
+
     /* FOOTER */
     .footer {
       border-top: 1px solid #eae6dc;
@@ -439,10 +521,10 @@
 </head>
 <body>
 
-  <!-- HEADER -->
+  <!-- HEADER (KhĂ´ng cĂ²n banner MVP) -->
   <header class="header">
     <div class="header-container">
-      <a href="#" class="logo-group" onclick="switchMode('login')">
+      <a href="#" class="logo-group" onclick="handleLogoClick()">
         <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
           <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
@@ -454,44 +536,53 @@
       </a>
 
       <nav class="nav-links">
-        <a href="#menu" class="nav-link">Thực đơn</a>
-        <a href="#stores" class="nav-link">Cửa hàng</a>
-        <a href="#history" class="nav-link">Lịch sử đơn</a>
+        <a href="#menu" class="nav-link">Thá»±c Ä‘Æ¡n</a>
+        <a href="#stores" class="nav-link">Cá»­a hĂ ng</a>
+        <a href="#history" class="nav-link">Lá»‹ch sá»­ Ä‘Æ¡n</a>
       </nav>
 
       <div class="header-right">
-        <button class="login-btn" id="headerAuthToggleBtn" onclick="toggleAuthMode()">
+        <!-- NĂT ÄÄ‚NG NHáº¬P (Chuyá»ƒn dá»©t khoĂ¡t sang form ÄÄƒng nháº­p) -->
+        <button class="login-btn" id="headerAuthBtn" onclick="handleHeaderLoginClick()">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          <span id="headerAuthText">Đăng nhập</span>
+          <span id="headerAuthText">ÄÄƒng nháº­p</span>
         </button>
 
-        <div class="cart-pill">
+        <!-- NĂT GIá» HĂ€NG -->
+        <button class="cart-pill" id="headerCartBtn" onclick="handleHeaderCartClick()">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <path d="M16 10a4 4 0 0 1-8 0"></path>
           </svg>
-          <span>Giỏ hàng · 3</span>
-        </div>
+          <span id="headerCartText">Giá» hĂ ng Â· 3</span>
+        </button>
       </div>
     </div>
   </header>
 
+  <!-- STEPPER SECTION (Máº·c Ä‘á»‹nh áº©n, chá»‰ hiá»‡n khi áº¥n Giá» hĂ ng hoáº·c ÄÄƒng nháº­p) -->
+  <section class="stepper-section" id="stepperSection" style="display:none;">
+    <div class="stepper-container" id="stepperContainer">
+      <!-- Sáº½ Ä‘Æ°á»£c render Ä‘á»™ng qua hĂ m renderStepper() -->
+    </div>
+  </section>
+
   <!-- MAIN CONTAINER -->
-  <main class="main-content">
-    <div class="content-grid">
+  <main class="main-content" id="mainContainer">
+    <div class="content-grid" id="authGrid">
 
       <!-- LEFT HERO -->
       <div class="hero-card">
         <img id="heroImage" src="cafe-hero-login.png" alt="BrewLite Coffee Corner" class="hero-image">
         
         <div class="floating-card">
-          <span id="floatingTag" class="floating-tag">MỘT KHOẢNG DỪNG DÀNH CHO BẠN</span>
-          <h3 id="floatingTitle" class="floating-title">Gu quen, không cần chờ lâu.</h3>
-          <p id="floatingDesc" class="floating-desc">Lưu đơn yêu thích. Đặt trước và ghé nhận tại quầy.</p>
+          <span id="floatingTag" class="floating-tag">Má»˜T KHOáº¢NG Dá»ªNG DĂ€NH CHO Báº N</span>
+          <h3 id="floatingTitle" class="floating-title">Gu quen, khĂ´ng cáº§n chá» lĂ¢u.</h3>
+          <p id="floatingDesc" class="floating-desc">LÆ°u Ä‘Æ¡n yĂªu thĂ­ch. Äáº·t trÆ°á»›c vĂ  ghĂ© nháº­n táº¡i quáº§y.</p>
         </div>
       </div>
 
@@ -500,8 +591,8 @@
         
         <!-- LOGIN VIEW -->
         <div id="loginView">
-          <h1 class="form-title">Chào bạn trở lại.</h1>
-          <p class="form-subtitle">Đăng nhập để tiếp tục với tài khoản và đơn hàng của bạn.</p>
+          <h1 class="form-title">ChĂ o báº¡n trá»Ÿ láº¡i.</h1>
+          <p class="form-subtitle">ÄÄƒng nháº­p Ä‘á»ƒ tiáº¿p tá»¥c vá»›i tĂ i khoáº£n vĂ  Ä‘Æ¡n hĂ ng cá»§a báº¡n.</p>
 
           <div class="info-alert">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#234d3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
@@ -509,18 +600,18 @@
               <line x1="12" y1="16" x2="12" y2="12"></line>
               <line x1="12" y1="8" x2="12.01" y2="8"></line>
             </svg>
-            <span class="info-alert-text">Giỏ của bạn được giữ nguyên: <strong>3 món · 175.000 VNĐ</strong>.</span>
+            <span class="info-alert-text">Giá» cá»§a báº¡n Ä‘Æ°á»£c giá»¯ nguyĂªn: <strong>3 mĂ³n Â· 175.000 VNÄ</strong>.</span>
           </div>
 
           <div class="required-notice">
-            <span class="required-star">*</span> Các trường có dấu (*) là bắt buộc
+            <span class="required-star">*</span> CĂ¡c trÆ°á»ng cĂ³ dáº¥u (*) lĂ  báº¯t buá»™c
           </div>
 
           <form class="form" id="loginForm" onsubmit="handleLoginSubmit(event)" novalidate>
             <div class="form-group">
               <label class="label">Email <span class="required-star">*</span></label>
               <div class="input-wrapper">
-                <input type="email" id="loginEmail" class="input" placeholder="minhanh@email.com">
+                <input type="email" id="loginEmail" class="input" placeholder="minhanh@email.com" value="minhanh@email.com">
                 <span class="input-icon-right">
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
@@ -532,9 +623,9 @@
             </div>
 
             <div class="form-group">
-              <label class="label">Mật khẩu <span class="required-star">*</span></label>
+              <label class="label">Máº­t kháº©u <span class="required-star">*</span></label>
               <div class="input-wrapper">
-                <input type="password" id="loginPassInput" class="input" placeholder="••••••••••••">
+                <input type="password" id="loginPassInput" class="input" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" value="password123">
                 <button type="button" class="icon-btn-toggle" onclick="togglePass('loginPassInput', this)">
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
@@ -548,13 +639,13 @@
             <div class="row-between">
               <label class="checkbox-label">
                 <input type="checkbox" class="checkbox">
-                <span>Ghi nhớ đăng nhập</span>
+                <span>Ghi nhá»› Ä‘Äƒng nháº­p</span>
               </label>
-              <a href="#forgot" class="forgot-link">Quên mật khẩu?</a>
+              <a href="#forgot" class="forgot-link">QuĂªn máº­t kháº©u?</a>
             </div>
 
             <button type="submit" class="primary-btn">
-              <span>Đăng nhập & tiếp tục</span>
+              <span>ÄÄƒng nháº­p & tiáº¿p tá»¥c</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
@@ -562,29 +653,29 @@
             </button>
 
             <div class="switch-prompt">
-              Chưa có tài khoản? <button type="button" class="switch-btn" onclick="switchMode('register')">Đăng ký ngay</button>
+              ChÆ°a cĂ³ tĂ i khoáº£n? <button type="button" class="switch-btn" onclick="switchMode('register')">ÄÄƒng kĂ½ ngay</button>
             </div>
           </form>
         </div>
 
         <!-- REGISTER VIEW -->
         <div id="registerView" style="display:none;">
-          <h1 class="form-title">Bắt đầu với BrewLite.</h1>
-          <p class="form-subtitle">Tạo tài khoản để lưu đơn yêu thích và trải nghiệm đặt trước tiện lợi.</p>
+          <h1 class="form-title">Báº¯t Ä‘áº§u vá»›i BrewLite.</h1>
+          <p class="form-subtitle">Táº¡o tĂ i khoáº£n Ä‘á»ƒ lÆ°u Ä‘Æ¡n yĂªu thĂ­ch vĂ  tráº£i nghiá»‡m Ä‘áº·t trÆ°á»›c tiá»‡n lá»£i.</p>
 
           <div class="required-notice">
-            <span class="required-star">*</span> Các trường có dấu (*) là bắt buộc
+            <span class="required-star">*</span> CĂ¡c trÆ°á»ng cĂ³ dáº¥u (*) lĂ  báº¯t buá»™c
           </div>
 
           <form class="form" id="registerForm" onsubmit="handleRegisterSubmit(event)" novalidate>
             <div class="form-two-cols">
               <div class="form-group">
-                <label class="label">Họ và tên <span class="required-star">*</span></label>
-                <input type="text" id="regName" class="input" placeholder="Nguyễn Minh Anh">
+                <label class="label">Há» vĂ  tĂªn <span class="required-star">*</span></label>
+                <input type="text" id="regName" class="input" placeholder="Nguyá»…n Minh Anh">
                 <span id="regNameError" class="field-error" style="display:none;"></span>
               </div>
               <div class="form-group">
-                <label class="label">Số điện thoại <span class="required-star">*</span></label>
+                <label class="label">Sá»‘ Ä‘iá»‡n thoáº¡i <span class="required-star">*</span></label>
                 <input type="tel" id="regPhone" class="input" placeholder="0901 234 567">
                 <span id="regPhoneError" class="field-error" style="display:none;"></span>
               </div>
@@ -605,9 +696,9 @@
             </div>
 
             <div class="form-group">
-              <label class="label">Mật khẩu <span class="required-star">*</span></label>
+              <label class="label">Máº­t kháº©u <span class="required-star">*</span></label>
               <div class="input-wrapper">
-                <input type="password" id="regPassInput" class="input" placeholder="••••••••••••">
+                <input type="password" id="regPassInput" class="input" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
                 <button type="button" class="icon-btn-toggle" onclick="togglePass('regPassInput', this)">
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
@@ -616,13 +707,13 @@
                 </button>
               </div>
               <span id="regPassError" class="field-error" style="display:none;"></span>
-              <span id="regPassHelper" class="helper-text">Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và chữ số.</span>
+              <span id="regPassHelper" class="helper-text">Ăt nháº¥t 8 kĂ½ tá»±, gá»“m chá»¯ hoa, chá»¯ thÆ°á»ng vĂ  chá»¯ sá»‘.</span>
             </div>
 
             <div class="form-group">
-              <label class="label">Nhập lại mật khẩu <span class="required-star">*</span></label>
+              <label class="label">Nháº­p láº¡i máº­t kháº©u <span class="required-star">*</span></label>
               <div class="input-wrapper">
-                <input type="password" id="regConfirmPassInput" class="input" placeholder="••••••••••••">
+                <input type="password" id="regConfirmPassInput" class="input" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
                 <button type="button" class="icon-btn-toggle" onclick="togglePass('regConfirmPassInput', this)">
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
@@ -637,14 +728,14 @@
               <label class="checkbox-label">
                 <input type="checkbox" id="regAgreeTerms" checked class="checkbox">
                 <span style="font-size: 13.5px; color: #333e37; line-height: 1.4;">
-                  Tôi đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư của BrewLite. <span class="required-star">*</span>
+                  TĂ´i Ä‘á»“ng Ă½ vá»›i Äiá»u khoáº£n sá»­ dá»¥ng vĂ  ChĂ­nh sĂ¡ch quyá»n riĂªng tÆ° cá»§a BrewLite. <span class="required-star">*</span>
                 </span>
               </label>
               <span id="regTermsError" class="field-error" style="display:none;"></span>
             </div>
 
             <button type="submit" class="primary-btn">
-              <span>Tạo tài khoản & tiếp tục</span>
+              <span>Táº¡o tĂ i khoáº£n & tiáº¿p tá»¥c</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
@@ -652,9 +743,53 @@
             </button>
 
             <div class="switch-prompt">
-              Đã có tài khoản? <button type="button" class="switch-btn" onclick="switchMode('login')">Đăng nhập</button>
+              ÄĂ£ cĂ³ tĂ i khoáº£n? <button type="button" class="switch-btn" onclick="switchMode('login')">ÄÄƒng nháº­p</button>
             </div>
           </form>
+        </div>
+
+        <!-- CART VIEW (ÄÆ N GIáº¢N HOĂ TRONG PREVIEW KHI Báº¤M BÆ¯á»C GIá» HĂ€NG) -->
+        <div id="cartView" style="display:none;">
+          <h1 class="form-title">Giá» hĂ ng cá»§a báº¡n</h1>
+          <p class="form-subtitle">3 mĂ³n Ä‘á»“ uá»‘ng thÆ¡m ngon Ä‘ang chá» báº¡n thÆ°á»Ÿng thá»©c.</p>
+          <div class="view-card-simple">
+            <div style="text-align:left; font-size:14px; line-height:2; margin-bottom:20px;">
+              <div>â˜• <strong>1 Ă— CĂ  phĂª Muá»‘i Signature (M)</strong> â€” 55.000 VNÄ</div>
+              <div>đŸ‘ <strong>1 Ă— TrĂ  ÄĂ o Cam Sáº£ (L)</strong> â€” 65.000 VNÄ</div>
+              <div>đŸ¥› <strong>1 Ă— Báº¡c Xá»‰u Sá»¯a TÆ°Æ¡i (M)</strong> â€” 55.000 VNÄ</div>
+              <div style="border-top:1px dashed #dbe1dc; margin-top:10px; padding-top:10px; font-size:16px;">
+                <strong>Tá»•ng cá»™ng: 175.000 VNÄ</strong>
+              </div>
+            </div>
+            <button type="button" class="primary-btn" onclick="handleContinueFromCart()">
+              <span>Tiáº¿p tá»¥c sang bÆ°á»›c tiáº¿p theo â†’</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PAYMENT VIEW (TRONG PREVIEW) -->
+        <div id="paymentView" style="display:none;">
+          <h1 class="form-title">Thanh toĂ¡n Ä‘Æ¡n hĂ ng</h1>
+          <p class="form-subtitle">Nháº­n táº¡i quáº§y, thanh toĂ¡n tiá»‡n lá»£i qua VĂ­ MoMo hoáº·c Tháº» ngĂ¢n hĂ ng.</p>
+          <div class="view-card-simple">
+            <p style="margin-bottom:16px; color:#4a554e;">ÄÆ¡n hĂ ng: <strong>#BL-1027 Â· 175.000 VNÄ</strong></p>
+            <button type="button" class="primary-btn" onclick="handleFinishPayment()">
+              <span>XĂ¡c nháº­n thanh toĂ¡n 175.000 VNÄ â†’</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CONFIRMATION VIEW (TRONG PREVIEW) -->
+        <div id="confirmationView" style="display:none;">
+          <h1 class="form-title">Äáº·t hĂ ng thĂ nh cĂ´ng!</h1>
+          <p class="form-subtitle">MĂ£ nháº­n mĂ³n cá»§a báº¡n lĂ  <strong>#BL-1027</strong>. Vui lĂ²ng ghĂ© quáº§y nháº­n nhĂ©.</p>
+          <div class="view-card-simple">
+            <p style="color:#27523f; font-weight:700; font-size:18px; margin-bottom:12px;">âœ“ ÄĂ£ thanh toĂ¡n 175.000 VNÄ</p>
+            <p style="color:#606c64; font-size:14px; margin-bottom:20px;">BrewLite Nguyá»…n Huá»‡ Â· Quáº­n 1 Ä‘ang chuáº©n bá»‹ Ä‘á»“ uá»‘ng cho báº¡n.</p>
+            <button type="button" class="primary-btn" onclick="handleResetOrder()">
+              <span>Äáº·t thĂªm Ä‘Æ¡n má»›i</span>
+            </button>
+          </div>
         </div>
 
       </div>
@@ -664,38 +799,223 @@
   <!-- FOOTER -->
   <footer class="footer">
     <div class="footer-container">
-      <div>BrewLite / Một chút chậm, một ngày thật ngon.</div>
+      <div>BrewLite / Má»™t chĂºt cháº­m, má»™t ngĂ y tháº­t ngon.</div>
       <div class="footer-links">
-        <a href="#support" class="footer-link">Hỗ trợ</a>
-        <span>•</span>
-        <a href="#terms" class="footer-link">Điều khoản</a>
-        <span>•</span>
-        <a href="#privacy" class="footer-link">Quyền riêng tư</a>
+        <a href="#support" class="footer-link">Há»— trá»£</a>
+        <span>â€¢</span>
+        <a href="#terms" class="footer-link">Äiá»u khoáº£n</a>
+        <span>â€¢</span>
+        <a href="#privacy" class="footer-link">Quyá»n riĂªng tÆ°</a>
       </div>
     </div>
   </footer>
 
   <script>
-    let currentMode = 'login';
+    // Tráº¡ng thĂ¡i á»©ng dá»¥ng
+    let stepperVisible = false;
+    let firstChoice = 'account'; // 'account' | 'cart'
+    let currentActiveStep = 'account'; // 'account' | 'cart' | 'payment' | 'confirmation'
+    let currentAuthMode = 'login'; // 'login' | 'register'
 
-    function switchMode(mode) {
-      currentMode = mode;
-      const isLogin = mode === 'login';
-      document.getElementById('loginView').style.display = isLogin ? 'block' : 'none';
-      document.getElementById('registerView').style.display = isLogin ? 'none' : 'block';
+    // RĂ ng buá»™c hoĂ n thĂ nh
+    let isCartCompleted = true; // 3 mĂ³n máº·c Ä‘á»‹nh
+    let isAccountCompleted = false; // ChÆ°a Ä‘Äƒng nháº­p
+    let isPaymentCompleted = false; // ChÆ°a thanh toĂ¡n
 
-      // Update hero card
-      document.getElementById('heroImage').src = isLogin ? 'cafe-hero-login.png' : 'cafe-hero-register.png';
-      document.getElementById('floatingTag').innerText = isLogin ? 'MỘT KHOẢNG DỪNG DÀNH CHO BẠN' : 'THÊM MỘT NGƯỜI BẠN, THÊM MỘT GU MỚI';
-      document.getElementById('floatingTitle').innerText = isLogin ? 'Gu quen, không cần chờ lâu.' : 'Hẹn bạn ở ly đầu tiên.';
-      document.getElementById('floatingDesc').innerText = isLogin ? 'Lưu đơn yêu thích. Đặt trước và ghé nhận tại quầy.' : 'Một tài khoản cho giỏ hàng, trạng thái đơn và những lần đặt lại.';
+    // Khá»Ÿi táº¡o
+    function renderStepper() {
+      const stepperSection = document.getElementById('stepperSection');
+      if (!stepperVisible) {
+        stepperSection.style.display = 'none';
+        return;
+      }
+      stepperSection.style.display = 'block';
 
-      // Header button
-      document.getElementById('headerAuthText').innerText = isLogin ? 'Đăng nhập' : 'Tạo tài khoản';
+      // 4 bÆ°á»›c linh hoáº¡t tĂ¹y theo firstChoice
+      let steps = [];
+      if (firstChoice === 'cart') {
+        steps = [
+          { key: 'cart', label: 'Giá» hĂ ng', isCompleted: isCartCompleted },
+          { key: 'account', label: 'TĂ i khoáº£n', isCompleted: isAccountCompleted },
+          { key: 'payment', label: 'Thanh toĂ¡n', isCompleted: isPaymentCompleted },
+          { key: 'confirmation', label: 'XĂ¡c nháº­n', isCompleted: isPaymentCompleted },
+        ];
+      } else {
+        steps = [
+          { key: 'account', label: 'TĂ i khoáº£n', isCompleted: isAccountCompleted },
+          { key: 'cart', label: 'Giá» hĂ ng', isCompleted: isCartCompleted },
+          { key: 'payment', label: 'Thanh toĂ¡n', isCompleted: isPaymentCompleted },
+          { key: 'confirmation', label: 'XĂ¡c nháº­n', isCompleted: isPaymentCompleted },
+        ];
+      }
+
+      const container = document.getElementById('stepperContainer');
+      container.innerHTML = '';
+
+      steps.forEach((step, index) => {
+        const isActive = step.key === currentActiveStep;
+        const isPassed = step.isCompleted && !isActive;
+
+        // Step Button
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'step-item';
+        btn.title = `BÆ°á»›c ${index + 1}: ${step.label}`;
+        btn.onclick = () => tryNavigateStep(step.key);
+
+        const circle = document.createElement('div');
+        circle.className = 'step-circle ' + (isPassed ? 'completed' : (isActive ? 'active' : 'pending'));
+        if (isPassed) {
+          circle.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        } else {
+          circle.innerText = index + 1;
+        }
+
+        const label = document.createElement('span');
+        label.className = 'step-label ' + (isActive ? 'active' : (isPassed ? 'completed' : ''));
+        label.innerText = step.label;
+
+        btn.appendChild(circle);
+        btn.appendChild(label);
+        container.appendChild(btn);
+
+        // Connector line
+        if (index < steps.length - 1) {
+          const connector = document.createElement('div');
+          connector.className = 'step-connector';
+          container.appendChild(connector);
+        }
+      });
     }
 
-    function toggleAuthMode() {
-      switchMode(currentMode === 'login' ? 'register' : 'login');
+    // Kiá»ƒm tra rĂ ng buá»™c Ä‘iá»u kiá»‡n
+    function tryNavigateStep(targetKey) {
+      if (targetKey === 'cart' || targetKey === 'account') {
+        goToStep(targetKey);
+        return;
+      }
+
+      if (targetKey === 'payment') {
+        if (!isCartCompleted) {
+          alert('â ï¸ RĂ ng buá»™c: Giá» hĂ ng cá»§a báº¡n Ä‘ang trá»‘ng. Vui lĂ²ng chá»n mĂ³n trÆ°á»›c khi thanh toĂ¡n.');
+          goToStep('cart');
+          return;
+        }
+        if (!isAccountCompleted) {
+          alert('â ï¸ RĂ ng buá»™c: Báº¡n cáº§n ÄÄ‚NG NHáº¬P hoáº·c Táº O TĂ€I KHOáº¢N trÆ°á»›c khi Ä‘Æ°á»£c phĂ©p vĂ o bÆ°á»›c Thanh toĂ¡n.');
+          goToStep('account');
+          return;
+        }
+        goToStep('payment');
+        return;
+      }
+
+      if (targetKey === 'confirmation') {
+        if (!isPaymentCompleted) {
+          alert('â ï¸ RĂ ng buá»™c: Báº¡n cáº§n hoĂ n táº¥t THANH TOĂN trÆ°á»›c khi xem xĂ¡c nháº­n Ä‘Æ¡n.');
+          tryNavigateStep('payment');
+          return;
+        }
+        goToStep('confirmation');
+        return;
+      }
+    }
+
+    function goToStep(key) {
+      currentActiveStep = key;
+      stepperVisible = true;
+      renderStepper();
+
+      // Hiá»ƒn thá»‹ view tÆ°Æ¡ng á»©ng
+      document.getElementById('loginView').style.display = (key === 'account' && currentAuthMode === 'login') ? 'block' : 'none';
+      document.getElementById('registerView').style.display = (key === 'account' && currentAuthMode === 'register') ? 'block' : 'none';
+      document.getElementById('cartView').style.display = key === 'cart' ? 'block' : 'none';
+      document.getElementById('paymentView').style.display = key === 'payment' ? 'block' : 'none';
+      document.getElementById('confirmationView').style.display = key === 'confirmation' ? 'block' : 'none';
+
+      // Cáº­p nháº­t hero card bĂªn trĂ¡i
+      const heroImg = document.getElementById('heroImage');
+      const tag = document.getElementById('floatingTag');
+      const title = document.getElementById('floatingTitle');
+      const desc = document.getElementById('floatingDesc');
+
+      if (key === 'cart') {
+        heroImg.src = 'cafe-hero-login.png';
+        tag.innerText = 'ÄÆ N HĂ€NG Cá»¦A Báº N';
+        title.innerText = 'HÆ°Æ¡ng vá»‹ báº¡n chá»n.';
+        desc.innerText = 'Kiá»ƒm tra ká»¹ cĂ¡c mĂ³n vĂ  tĂ¹y chá»n Ä‘Æ°á»ng Ä‘Ă¡ trÆ°á»›c khi nháº­n.';
+      } else if (key === 'payment') {
+        heroImg.src = 'cafe-hero-login.png';
+        tag.innerText = 'THANH TOĂN AN TOĂ€N';
+        title.innerText = 'Thanh toĂ¡n khĂ´ng tiá»n máº·t.';
+        desc.innerText = 'Báº£o máº­t vĂ  tiá»‡n lá»£i qua VĂ­ Ä‘iá»‡n tá»­ hoáº·c tháº» ngĂ¢n hĂ ng.';
+      } else if (key === 'confirmation') {
+        heroImg.src = 'cafe-hero-register.png';
+        tag.innerText = 'ÄĂƒ Sáº´N SĂ€NG';
+        title.innerText = 'Háº¹n báº¡n táº¡i quáº§y.';
+        desc.innerText = 'ÄÆ°a mĂ£ Ä‘Æ¡n cho barista vĂ  táº­n hÆ°á»Ÿng ly cĂ  phĂª thÆ¡m ngon.';
+      } else {
+        // Account view
+        const isLogin = currentAuthMode === 'login';
+        heroImg.src = isLogin ? 'cafe-hero-login.png' : 'cafe-hero-register.png';
+        tag.innerText = isLogin ? 'Má»˜T KHOáº¢NG Dá»ªNG DĂ€NH CHO Báº N' : 'THĂM Má»˜T NGÆ¯á»œI Báº N, THĂM Má»˜T GU Má»I';
+        title.innerText = isLogin ? 'Gu quen, khĂ´ng cáº§n chá» lĂ¢u.' : 'Háº¹n báº¡n á»Ÿ ly Ä‘áº§u tiĂªn.';
+        desc.innerText = isLogin ? 'LÆ°u Ä‘Æ¡n yĂªu thĂ­ch. Äáº·t trÆ°á»›c vĂ  ghĂ© nháº­n táº¡i quáº§y.' : 'Má»™t tĂ i khoáº£n cho giá» hĂ ng, tráº¡ng thĂ¡i Ä‘Æ¡n vĂ  nhá»¯ng láº§n Ä‘áº·t láº¡i.';
+      }
+    }
+
+    // Click nĂºt ÄÄƒng nháº­p trĂªn tiĂªu Ä‘á» (Header)
+    function handleHeaderLoginClick() {
+      if (isAccountCompleted) {
+        if (confirm('Báº¡n Ä‘ang Ä‘Äƒng nháº­p. Báº¡n cĂ³ muá»‘n Ä‘Äƒng xuáº¥t khĂ´ng?')) {
+          isAccountCompleted = false;
+          document.getElementById('headerAuthText').innerText = 'ÄÄƒng nháº­p';
+          handleHeaderLoginClick();
+        }
+        return;
+      }
+      firstChoice = 'account'; // NgÆ°á»i dĂ¹ng chá»n TĂ i khoáº£n trÆ°á»›c!
+      currentAuthMode = 'login';
+      goToStep('account');
+    }
+
+    // Click nĂºt Giá» hĂ ng trĂªn tiĂªu Ä‘á» (Header)
+    function handleHeaderCartClick() {
+      firstChoice = 'cart'; // NgÆ°á»i dĂ¹ng chá»n Giá» hĂ ng trÆ°á»›c!
+      goToStep('cart');
+    }
+
+    function handleLogoClick() {
+      stepperVisible = false;
+      renderStepper();
+      handleHeaderLoginClick();
+    }
+
+    function switchMode(mode) {
+      currentAuthMode = mode;
+      goToStep('account');
+    }
+
+    function handleContinueFromCart() {
+      if (!isAccountCompleted) {
+        // ChÆ°a Ä‘Äƒng nháº­p -> báº¯t buá»™c qua TĂ i khoáº£n
+        alert('Vui lĂ²ng ÄÄƒng nháº­p hoáº·c Táº¡o tĂ i khoáº£n trÆ°á»›c khi tiáº¿p tá»¥c.');
+        goToStep('account');
+      } else {
+        // ÄĂ£ Ä‘Äƒng nháº­p -> sang Thanh toĂ¡n
+        tryNavigateStep('payment');
+      }
+    }
+
+    function handleFinishPayment() {
+      isPaymentCompleted = true;
+      tryNavigateStep('confirmation');
+    }
+
+    function handleResetOrder() {
+      isPaymentCompleted = false;
+      firstChoice = 'cart';
+      goToStep('cart');
     }
 
     function togglePass(inputId, btn) {
@@ -709,8 +1029,8 @@
       }
     }
 
-    // Validation functions
-    const NAME_REGEX = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
+    // Validation Regex
+    const NAME_REGEX = /^[a-zA-ZĂ€ĂĂ‚ĂƒĂˆĂ‰ĂĂŒĂĂ’Ă“Ă”Ă•Ă™ĂÄ‚ÄÄ¨Å¨Æ Ă Ă¡Ă¢Ă£Ă¨Ă©ĂªĂ¬Ă­Ă²Ă³Ă´ĂµĂ¹ĂºÄƒÄ‘Ä©Å©Æ¡Æ¯Ä‚áº áº¢áº¤áº¦áº¨áºªáº¬áº®áº°áº²áº´áº¶áº¸áººáº¼á»€á»€á»‚Æ°Äƒáº¡áº£áº¥áº§áº©áº«áº­áº¯áº±áº³áºµáº·áº¹áº»áº½á»á»á»ƒá»„á»†á»ˆá»á»Œá»á»á»’á»”á»–á»˜á»á»œá»á» á»¢á»¤á»¦á»¨á»ªá»…á»‡á»‰á»‹á»á»á»‘á»“á»•á»—á»™á»›á»á»Ÿá»¡á»£á»¥á»§á»©á»«á»¬á»®á»°á»²á»´Ăá»¶á»¸á»­á»¯á»±á»³á»µá»·á»¹\s]+$/;
     const PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
@@ -736,27 +1056,31 @@
 
       let valid = true;
       if (!email) {
-        showError('loginEmail', 'loginEmailError', 'Vui lòng nhập email.');
+        showError('loginEmail', 'loginEmailError', 'Vui lĂ²ng nháº­p email.');
         valid = false;
       } else if (!EMAIL_REGEX.test(email)) {
-        showError('loginEmail', 'loginEmailError', 'Email không đúng định dạng (ví dụ: ten@email.com).');
+        showError('loginEmail', 'loginEmailError', 'Email khĂ´ng Ä‘Ăºng Ä‘á»‹nh dáº¡ng (vĂ­ dá»¥: ten@email.com).');
         valid = false;
       } else {
         showError('loginEmail', 'loginEmailError', '');
       }
 
       if (!pass) {
-        showError('loginPassInput', 'loginPassError', 'Vui lòng nhập mật khẩu.');
+        showError('loginPassInput', 'loginPassError', 'Vui lĂ²ng nháº­p máº­t kháº©u.');
         valid = false;
       } else if (pass.length < 8) {
-        showError('loginPassInput', 'loginPassError', 'Mật khẩu phải có ít nhất 8 ký tự.');
+        showError('loginPassInput', 'loginPassError', 'Máº­t kháº©u pháº£i cĂ³ Ă­t nháº¥t 8 kĂ½ tá»±.');
         valid = false;
       } else {
         showError('loginPassInput', 'loginPassError', '');
       }
 
       if (valid) {
-        alert('Đăng nhập thành công với email: ' + email);
+        isAccountCompleted = true;
+        document.getElementById('headerAuthText').innerText = 'Minh Anh';
+        alert('âœ“ ÄÄƒng nháº­p thĂ nh cĂ´ng! HoĂ n thĂ nh bÆ°á»›c TĂ i khoáº£n.');
+        // Sau khi Ä‘Äƒng nháº­p, náº¿u giá» hĂ ng Ä‘Ă£ cĂ³ Ä‘á»“ -> sang thanh toĂ¡n
+        tryNavigateStep('payment');
       }
     }
 
@@ -771,81 +1095,81 @@
 
       let valid = true;
 
-      // Họ tên
       if (!name) {
-        showError('regName', 'regNameError', 'Vui lòng nhập họ và tên.');
+        showError('regName', 'regNameError', 'Vui lĂ²ng nháº­p há» vĂ  tĂªn.');
         valid = false;
       } else if (name.length < 2) {
-        showError('regName', 'regNameError', 'Họ và tên phải có ít nhất 2 ký tự.');
+        showError('regName', 'regNameError', 'Há» vĂ  tĂªn pháº£i cĂ³ Ă­t nháº¥t 2 kĂ½ tá»±.');
         valid = false;
       } else if (!NAME_REGEX.test(name)) {
-        showError('regName', 'regNameError', 'Họ và tên chỉ được chứa chữ cái.');
+        showError('regName', 'regNameError', 'Há» vĂ  tĂªn chá»‰ Ä‘Æ°á»£c chá»©a chá»¯ cĂ¡i.');
         valid = false;
       } else {
         showError('regName', 'regNameError', '');
       }
 
-      // SĐT
       if (!phone) {
-        showError('regPhone', 'regPhoneError', 'Vui lòng nhập số điện thoại.');
+        showError('regPhone', 'regPhoneError', 'Vui lĂ²ng nháº­p sá»‘ Ä‘iá»‡n thoáº¡i.');
         valid = false;
       } else if (!PHONE_REGEX.test(phone.replace(/\s+/g, ''))) {
-        showError('regPhone', 'regPhoneError', 'Số điện thoại không hợp lệ (10 số, bắt đầu 03, 05, 07, 08, 09).');
+        showError('regPhone', 'regPhoneError', 'Sá»‘ Ä‘iá»‡n thoáº¡i khĂ´ng há»£p lá»‡ (10 sá»‘, báº¯t Ä‘áº§u 03, 05, 07, 08, 09).');
         valid = false;
       } else {
         showError('regPhone', 'regPhoneError', '');
       }
 
-      // Email
       if (!email) {
-        showError('regEmail', 'regEmailError', 'Vui lòng nhập email.');
+        showError('regEmail', 'regEmailError', 'Vui lĂ²ng nháº­p email.');
         valid = false;
       } else if (!EMAIL_REGEX.test(email)) {
-        showError('regEmail', 'regEmailError', 'Email không đúng định dạng (ví dụ: ten@email.com).');
+        showError('regEmail', 'regEmailError', 'Email khĂ´ng Ä‘Ăºng Ä‘á»‹nh dáº¡ng (vĂ­ dá»¥: ten@email.com).');
         valid = false;
       } else {
         showError('regEmail', 'regEmailError', '');
       }
 
-      // Password
       if (!pass) {
-        showError('regPassInput', 'regPassError', 'Vui lòng nhập mật khẩu.');
+        showError('regPassInput', 'regPassError', 'Vui lĂ²ng nháº­p máº­t kháº©u.');
         valid = false;
       } else if (pass.length < 8) {
-        showError('regPassInput', 'regPassError', 'Mật khẩu phải có ít nhất 8 ký tự.');
+        showError('regPassInput', 'regPassError', 'Máº­t kháº©u pháº£i cĂ³ Ă­t nháº¥t 8 kĂ½ tá»±.');
         valid = false;
       } else if (!PASSWORD_REGEX.test(pass)) {
-        showError('regPassInput', 'regPassError', 'Mật khẩu phải gồm cả chữ hoa, chữ thường và chữ số.');
+        showError('regPassInput', 'regPassError', 'Máº­t kháº©u pháº£i gá»“m cáº£ chá»¯ hoa, chá»¯ thÆ°á»ng vĂ  chá»¯ sá»‘.');
         valid = false;
       } else {
         showError('regPassInput', 'regPassError', '');
       }
 
-      // Confirm pass
       if (!confirmPass) {
-        showError('regConfirmPassInput', 'regConfirmPassError', 'Vui lòng nhập lại mật khẩu.');
+        showError('regConfirmPassInput', 'regConfirmPassError', 'Vui lĂ²ng nháº­p láº¡i máº­t kháº©u.');
         valid = false;
       } else if (confirmPass !== pass) {
-        showError('regConfirmPassInput', 'regConfirmPassError', 'Mật khẩu xác nhận không trùng khớp.');
+        showError('regConfirmPassInput', 'regConfirmPassError', 'Máº­t kháº©u xĂ¡c nháº­n khĂ´ng trĂ¹ng khá»›p.');
         valid = false;
       } else {
         showError('regConfirmPassInput', 'regConfirmPassError', '');
       }
 
-      // Terms
       const termsErr = document.getElementById('regTermsError');
       if (!agree) {
         termsErr.style.display = 'flex';
-        termsErr.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Bạn cần đồng ý với Điều khoản sử dụng.`;
+        termsErr.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Báº¡n cáº§n Ä‘á»“ng Ă½ vá»›i Äiá»u khoáº£n sá»­ dá»¥ng.`;
         valid = false;
       } else {
         termsErr.style.display = 'none';
       }
 
       if (valid) {
-        alert('Tạo tài khoản thành công cho: ' + name + ' (' + email + ')');
+        isAccountCompleted = true;
+        document.getElementById('headerAuthText').innerText = name.split(' ').slice(-1)[0] || 'Minh Anh';
+        alert('âœ“ Táº¡o tĂ i khoáº£n thĂ nh cĂ´ng! HoĂ n thĂ nh bÆ°á»›c TĂ i khoáº£n.');
+        tryNavigateStep('payment');
       }
     }
+
+    // Khá»Ÿi cháº¡y máº·c Ä‘á»‹nh: má»Ÿ mĂ n hĂ¬nh Ä‘Äƒng nháº­p vĂ  báº­t stepper
+    goToStep('account');
   </script>
 </body>
 </html>
