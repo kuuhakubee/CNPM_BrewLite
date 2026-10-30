@@ -35,8 +35,7 @@ const MOCK_PRODUCT = {
   tagline: "Đậm một chút, êm thật lâu.",
   description:
     "Espresso thơm hương hạt hòa cùng sữa mịn. Chọn sữa yến mạch để thêm vị béo dịu và hậu vị ngọt tự nhiên.",
-  allergyNote:
-    "Có thể chứa sữa và yến mạch. Vui lòng kiểm tra trước khi đặt.",
+  allergyNote: "Có thể chứa sữa và yến mạch. Vui lòng kiểm tra trước khi đặt.",
   sizes: [
     { code: "S", label: "S · +0 VNĐ", priceDelta: 0 },
     { code: "M", label: "M · +6.000 VNĐ", priceDelta: 6000 },
@@ -125,7 +124,12 @@ function OptionGroup({ label, children }) {
 function Divider() {
   return (
     <div
-      style={{ width: "100%", height: "1px", background: C.border, margin: "0" }}
+      style={{
+        width: "100%",
+        height: "1px",
+        background: C.border,
+        margin: "0",
+      }}
     />
   );
 }
@@ -150,7 +154,7 @@ export default function ProductDetail({ params }) {
           setProduct(MOCK_PRODUCT);
         } else {
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${id}`
+            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${id}`,
           );
           if (!res.ok) throw new Error("Network error");
           const data = await res.json();
@@ -173,12 +177,28 @@ export default function ProductDetail({ params }) {
     setSelectedToppings((prev) =>
       prev.includes(toppingId)
         ? prev.filter((i) => i !== toppingId)
-        : [...prev, toppingId]
+        : [...prev, toppingId],
     );
   };
 
-  if (loading) return <p style={{ padding: "2rem", fontFamily: "Inter, sans-serif" }}>Đang tải...</p>;
-  if (error) return <p style={{ padding: "2rem", color: "red", fontFamily: "Inter, sans-serif" }}>Lỗi: {error}</p>;
+  if (loading)
+    return (
+      <p style={{ padding: "2rem", fontFamily: "Inter, sans-serif" }}>
+        Đang tải...
+      </p>
+    );
+  if (error)
+    return (
+      <p
+        style={{
+          padding: "2rem",
+          color: "red",
+          fontFamily: "Inter, sans-serif",
+        }}
+      >
+        Lỗi: {error}
+      </p>
+    );
   if (!product) return null;
 
   const pricePerCup = calcPerCup(product, sizeCode, selectedToppings);
@@ -187,7 +207,8 @@ export default function ProductDetail({ params }) {
   // Breakdown string: 49.000 + 6.000 + 10.000 VNĐ
   const selectedSize = product.sizes.find((s) => s.code === sizeCode);
   const breakdownParts = [fmtShort(product.basePrice)];
-  if (selectedSize?.priceDelta > 0) breakdownParts.push(fmtShort(selectedSize.priceDelta));
+  if (selectedSize?.priceDelta > 0)
+    breakdownParts.push(fmtShort(selectedSize.priceDelta));
   product.toppings
     .filter((t) => selectedToppings.includes(t.id))
     .forEach((t) => breakdownParts.push(fmtShort(t.price)));
@@ -218,7 +239,8 @@ export default function ProductDetail({ params }) {
           letterSpacing: "0.01em",
         }}
       >
-        BẢN THIẾT KẾ MVP &nbsp;•&nbsp; Nhận tại quầy &nbsp;•&nbsp; Thanh toán mẫu, không phát sinh giao dịch
+        BẢN THIẾT KẾ MVP &nbsp;•&nbsp; Nhận tại quầy &nbsp;•&nbsp; Thanh toán
+        mẫu, không phát sinh giao dịch
       </div>
 
       {/* ── Navbar ── */}
@@ -243,8 +265,17 @@ export default function ProductDetail({ params }) {
           }}
         >
           <svg width="29" height="29" viewBox="0 0 24 24" fill="none">
-            <path d="M3 9h18M3 9c0-2 1.5-6 9-6s9 4 9 6M3 9v9a2 2 0 002 2h14a2 2 0 002-2V9" stroke={C.primary} strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M8 15c0 1.1.9 2 2 2h4a2 2 0 000-4h-4a2 2 0 00-2 2z" stroke={C.primary} strokeWidth="1.5"/>
+            <path
+              d="M3 9h18M3 9c0-2 1.5-6 9-6s9 4 9 6M3 9v9a2 2 0 002 2h14a2 2 0 002-2V9"
+              stroke={C.primary}
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+            <path
+              d="M8 15c0 1.1.9 2 2 2h4a2 2 0 000-4h-4a2 2 0 00-2 2z"
+              stroke={C.primary}
+              strokeWidth="1.5"
+            />
           </svg>
           <span
             style={{
@@ -268,7 +299,12 @@ export default function ProductDetail({ params }) {
           ].map((item) => (
             <div
               key={item.label}
-              style={{ display: "flex", flexDirection: "column", gap: "8px", cursor: "pointer" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                cursor: "pointer",
+              }}
             >
               <span
                 style={{
@@ -281,7 +317,13 @@ export default function ProductDetail({ params }) {
                 {item.label}
               </span>
               {item.active && (
-                <div style={{ height: "2px", background: C.primary, borderRadius: "1px" }} />
+                <div
+                  style={{
+                    height: "2px",
+                    background: C.primary,
+                    borderRadius: "1px",
+                  }}
+                />
               )}
             </div>
           ))}
@@ -289,10 +331,22 @@ export default function ProductDetail({ params }) {
 
         {/* Account + Cart */}
         <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              cursor: "pointer",
+            }}
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="8" r="4" stroke={C.text} strokeWidth="1.5"/>
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={C.text} strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="12" cy="8" r="4" stroke={C.text} strokeWidth="1.5" />
+              <path
+                d="M4 20c0-4 3.6-7 8-7s8 3 8 7"
+                stroke={C.text}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
             <span style={{ fontSize: "14px", color: C.text }}>Đăng nhập</span>
           </div>
@@ -308,11 +362,37 @@ export default function ProductDetail({ params }) {
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke={C.primary} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="3" y1="6" x2="21" y2="6" stroke={C.primary} strokeWidth="1.5"/>
-              <path d="M16 10a4 4 0 01-8 0" stroke={C.primary} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
+                stroke={C.primary}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <line
+                x1="3"
+                y1="6"
+                x2="21"
+                y2="6"
+                stroke={C.primary}
+                strokeWidth="1.5"
+              />
+              <path
+                d="M16 10a4 4 0 01-8 0"
+                stroke={C.primary}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: C.primary, lineHeight: "21.7px" }}>
+            <span
+              style={{
+                fontSize: "14px",
+                fontWeight: 600,
+                color: C.primary,
+                lineHeight: "21.7px",
+              }}
+            >
               Giỏ hàng · 1
             </span>
           </div>
@@ -330,7 +410,14 @@ export default function ProductDetail({ params }) {
         }}
       >
         {/* Breadcrumb */}
-        <p style={{ margin: 0, fontSize: "13px", color: C.textMuted, lineHeight: "20.1px" }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: "13px",
+            color: C.textMuted,
+            lineHeight: "20.1px",
+          }}
+        >
           Thực đơn / Cà phê / {product.name}
         </p>
 
@@ -393,18 +480,61 @@ export default function ProductDetail({ params }) {
             </p>
 
             {/* Description */}
-            <p style={{ margin: 0, fontSize: "14px", color: C.textMuted, lineHeight: "21.7px" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "14px",
+                color: C.textMuted,
+                lineHeight: "21.7px",
+              }}
+            >
               {product.description}
             </p>
 
             {/* Allergy note */}
-            <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: "1px" }}>
-                <circle cx="12" cy="12" r="10" stroke={C.textMuted} strokeWidth="1.5"/>
-                <line x1="12" y1="8" x2="12" y2="12" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round"/>
-                <circle cx="12" cy="16" r="0.5" fill={C.textMuted} stroke={C.textMuted} strokeWidth="1"/>
+            <div
+              style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{ flexShrink: 0, marginTop: "1px" }}
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke={C.textMuted}
+                  strokeWidth="1.5"
+                />
+                <line
+                  x1="12"
+                  y1="8"
+                  x2="12"
+                  y2="12"
+                  stroke={C.textMuted}
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="12"
+                  cy="16"
+                  r="0.5"
+                  fill={C.textMuted}
+                  stroke={C.textMuted}
+                  strokeWidth="1"
+                />
               </svg>
-              <p style={{ margin: 0, fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "12px",
+                  color: C.textMuted,
+                  lineHeight: "18.6px",
+                }}
+              >
                 {product.allergyNote}
               </p>
             </div>
@@ -459,7 +589,13 @@ export default function ProductDetail({ params }) {
               >
                 {fmt(product.basePrice)}
               </span>
-              <span style={{ fontSize: "13px", color: C.textMuted, lineHeight: "20.1px" }}>
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: C.textMuted,
+                  lineHeight: "20.1px",
+                }}
+              >
                 {product.baseSizeLabel}
               </span>
             </div>
@@ -506,7 +642,9 @@ export default function ProductDetail({ params }) {
             </OptionGroup>
 
             {/* Toppings */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+            >
               <p
                 style={{
                   margin: 0,
@@ -555,8 +693,19 @@ export default function ProductDetail({ params }) {
                       }}
                     >
                       {checked && (
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                          <path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <svg
+                          width="10"
+                          height="8"
+                          viewBox="0 0 10 8"
+                          fill="none"
+                        >
+                          <path
+                            d="M1 4l3 3 5-6"
+                            stroke="#fff"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                       )}
                     </div>
@@ -589,7 +738,13 @@ export default function ProductDetail({ params }) {
             <Divider />
 
             {/* Quantity + price per cup */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
               {/* Quantity control */}
               <div
                 style={{
@@ -616,7 +771,15 @@ export default function ProductDetail({ params }) {
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <line x1="5" y1="12" x2="19" y2="12" stroke={C.text} strokeWidth="1.5" strokeLinecap="round"/>
+                    <line
+                      x1="5"
+                      y1="12"
+                      x2="19"
+                      y2="12"
+                      stroke={C.text}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
                   </svg>
                 </button>
                 <span
@@ -644,14 +807,37 @@ export default function ProductDetail({ params }) {
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <line x1="12" y1="5" x2="12" y2="19" stroke={C.text} strokeWidth="1.5" strokeLinecap="round"/>
-                    <line x1="5" y1="12" x2="19" y2="12" stroke={C.text} strokeWidth="1.5" strokeLinecap="round"/>
+                    <line
+                      x1="12"
+                      y1="5"
+                      x2="12"
+                      y2="19"
+                      stroke={C.text}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                    <line
+                      x1="5"
+                      y1="12"
+                      x2="19"
+                      y2="12"
+                      stroke={C.text}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
                   </svg>
                 </button>
               </div>
 
               {/* Price per cup */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "right" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2px",
+                  textAlign: "right",
+                }}
+              >
                 <span
                   style={{
                     fontSize: "18px",
@@ -662,7 +848,13 @@ export default function ProductDetail({ params }) {
                 >
                   {fmt(pricePerCup)} / ly
                 </span>
-                <span style={{ fontSize: "11px", color: C.textMuted, lineHeight: "17px" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    color: C.textMuted,
+                    lineHeight: "17px",
+                  }}
+                >
                   {breakdown}
                 </span>
               </div>
@@ -700,14 +892,40 @@ export default function ProductDetail({ params }) {
                 Thêm {qty} ly vào giỏ &nbsp;·&nbsp; {fmt(totalPrice)}
               </span>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="3" y1="6" x2="21" y2="6" stroke="#fff" strokeWidth="1.5"/>
-                <path d="M16 10a4 4 0 01-8 0" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path
+                  d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
+                  stroke="#fff"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <line
+                  x1="3"
+                  y1="6"
+                  x2="21"
+                  y2="6"
+                  stroke="#fff"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M16 10a4 4 0 01-8 0"
+                  stroke="#fff"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
 
             {/* Note */}
-            <p style={{ margin: 0, fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "12px",
+                color: C.textMuted,
+                lineHeight: "18.6px",
+              }}
+            >
               Bạn có thể thay đổi tùy chọn trong giỏ hàng trước khi thanh toán.
             </p>
           </div>
@@ -726,10 +944,14 @@ export default function ProductDetail({ params }) {
           background: C.bg,
         }}
       >
-        <span style={{ fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}>
+        <span
+          style={{ fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}
+        >
           BrewLite / Một chút chậm, một ngày thật ngon.
         </span>
-        <span style={{ fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}>
+        <span
+          style={{ fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}
+        >
           Hỗ trợ &nbsp;•&nbsp; Điều khoản &nbsp;•&nbsp; Quyền riêng tư
         </span>
       </footer>

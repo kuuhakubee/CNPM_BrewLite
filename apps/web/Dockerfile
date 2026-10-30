@@ -27,8 +27,10 @@ ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
+# Copy các file tĩnh và standalone output từ Next.js
+# Lưu ý: do outputFileTracingRoot trỏ về thư mục cha, trong container standalone nằm tại /app/.next/standalone/app
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/app ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
