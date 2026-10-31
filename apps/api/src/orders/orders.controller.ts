@@ -10,19 +10,21 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateOrderDto } from './dto/create-order.dto';
 
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Route đặt đơn hàng – được bảo vệ nghiêm ngặt bởi JwtAuthGuard.
-   * Yêu cầu client phải gửi Header: Authorization: Bearer <jwt_token>
+   * Task 6 – API tạo đơn hàng (POST /orders):
+   * Nhận giỏ hàng, validate bằng class-validator (CreateOrderDto),
+   * lưu đơn trạng thái PENDING và trả mã đơn.
    */
   @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createOrder(@Request() req: any, @Body() body: any) {
+  async createOrder(@Request() req: any, @Body() dto: CreateOrderDto) {
     const userId = req.user.id;
     const orderCode = `#${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -31,9 +33,9 @@ export class OrdersController {
         code: orderCode,
         userId: userId,
         status: 'PENDING',
-        subtotal: body.subtotal || 175000,
-        discount: body.discount || 0,
-        total: body.total || 175000,
+        subtotal: dto.subtotal,
+        discount: dto.discount || 0,
+        total: dto.total,
       },
     });
 
@@ -43,9 +45,6 @@ export class OrdersController {
     };
   }
 
-  /**
-   * Route xem danh sách đơn hàng của người dùng đang đăng nhập
-   */
   @UseGuards(JwtAuthGuard)
   @Get()
   async getMyOrders(@Request() req: any) {
