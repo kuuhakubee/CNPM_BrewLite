@@ -46,7 +46,7 @@ export class OrdersController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get()
+  @Get('me')
   async getMyOrders(@Request() req: any) {
     const userId = req.user.id;
     return this.prisma.order.findMany({
