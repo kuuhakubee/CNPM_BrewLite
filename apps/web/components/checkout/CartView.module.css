@@ -1,0 +1,379 @@
+.container {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 12px 24px 64px;
+}
+
+.headerTitleGroup {
+  margin-bottom: 28px;
+}
+
+.sectionBadge {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #27523f;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.pageTitle {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 700;
+  color: #19211d;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+  line-height: 1.25;
+}
+
+.pageSubtitle {
+  font-size: 14.5px;
+  color: #5f6c64;
+}
+
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .layoutGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.itemCard {
+  background-color: #ffffff;
+  border: 1px solid #e5e8e5;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.itemImageWrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #f2ede5;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.itemPlaceholder {
+  font-size: 28px;
+}
+
+.itemInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.itemName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #19211d;
+  margin: 0;
+}
+
+.itemOptionLine {
+  font-size: 13px;
+  color: #5f6c64;
+}
+
+.itemToppingLine {
+  font-size: 13px;
+  color: #5f6c64;
+}
+
+.unitPriceLine {
+  font-size: 12.5px;
+  color: #849087;
+  margin-top: 2px;
+}
+
+.editOptionsLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #27523f;
+  text-align: left;
+  cursor: pointer;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.editOptionsLink:hover {
+  text-decoration: underline;
+}
+
+.itemControls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 120px;
+}
+
+.itemTotal {
+  font-size: 16px;
+  font-weight: 700;
+  color: #19211d;
+}
+
+.qtyBox {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dbe1dc;
+  border-radius: 8px;
+  padding: 2px 6px;
+  background: #ffffff;
+  gap: 10px;
+}
+
+.qtyBtn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: #5f6c64;
+  cursor: pointer;
+  width: 22px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.qtyBtn:hover {
+  background-color: #f2ede5;
+  color: #19211d;
+}
+
+.qtyNum {
+  font-size: 14px;
+  font-weight: 600;
+  color: #19211d;
+  min-width: 14px;
+  text-align: center;
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #768078;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.deleteBtn:hover {
+  color: #a83232;
+}
+
+/* Alert notice callout */
+.alertNotice {
+  background-color: #eaf1ec;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.alertIconWrapper {
+  color: #27523f;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.alertText {
+  font-size: 13.5px;
+  color: #27523f;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.continueShoppingBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: 1px solid #dbe1dc;
+  border-radius: 8px;
+  background-color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #19211d;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.continueShoppingBtn:hover {
+  background-color: #f7f5ef;
+  border-color: #ccd4cd;
+}
+
+/* Right Column: Order Summary Card */
+.summaryCard {
+  background-color: #ffffff;
+  border: 1px solid #e5e8e5;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.summaryTitle {
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 700;
+  color: #19211d;
+  margin: 0 0 14px;
+}
+
+.pickupBadgeGroup {
+  margin-bottom: 12px;
+}
+
+.pickupBadge {
+  display: inline-block;
+  background-color: #e8efe9;
+  color: #1e382b;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.storeBlock {
+  margin-bottom: 18px;
+}
+
+.storeName {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #19211d;
+  margin-bottom: 3px;
+}
+
+.storeAddress {
+  font-size: 12.5px;
+  color: #768078;
+  line-height: 1.4;
+}
+
+.summaryDivider {
+  height: 1px;
+  background-color: #eae6dc;
+  margin: 16px 0;
+}
+
+.feeRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+  color: #5f6c64;
+  margin-bottom: 10px;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.totalLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: #19211d;
+}
+
+.totalValue {
+  font-size: 22px;
+  font-weight: 800;
+  color: #19211d;
+}
+
+.vatNote {
+  font-size: 12px;
+  color: #849087;
+  margin-bottom: 20px;
+}
+
+.checkoutBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #1e382b;
+  color: #ffffff;
+  border: none;
+  padding: 13px 20px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-family: inherit;
+}
+
+.checkoutBtn:hover:not(:disabled) {
+  background-color: #274b3a;
+}
+
+.checkoutBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.authNotice {
+  font-size: 12.5px;
+  color: #768078;
+  line-height: 1.45;
+  margin-top: 14px;
+  text-align: left;
+}
