@@ -21,7 +21,6 @@ const C = {
 // ─── Mock Data ───────────────────────────────────────────────
 const MOCK_PRODUCT = {
   id: "1",
-  step: "02 / TÙY CHỌN ĐỒ UỐNG",
   name: "Latte yến mạch",
   basePrice: 49000,
   baseSizeLabel: "Giá gốc size S · Chưa thêm tùy chọn",

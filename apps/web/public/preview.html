@@ -825,7 +825,7 @@
     // Khá»Ÿi táº¡o
     function renderStepper() {
       const stepperSection = document.getElementById('stepperSection');
-      if (!stepperVisible) {
+      if (!isAccountCompleted) {
         stepperSection.style.display = 'none';
         return;
       }
@@ -861,7 +861,15 @@
         btn.type = 'button';
         btn.className = 'step-item';
         btn.title = `BÆ°á»›c ${index + 1}: ${step.label}`;
-        btn.onclick = () => tryNavigateStep(step.key);
+        // Bước 1 (index 0) bị khóa sau khi đăng nhập thành công
+        if (index === 0) {
+          btn.style.cursor = 'not-allowed';
+          btn.style.opacity = '0.65';
+          btn.disabled = true;
+          btn.title = Bước 1:  (Đã khóa);
+        } else {
+          btn.onclick = () => tryNavigateStep(step.key);
+        }
 
         const circle = document.createElement('div');
         circle.className = 'step-circle ' + (isPassed ? 'completed' : (isActive ? 'active' : 'pending'));

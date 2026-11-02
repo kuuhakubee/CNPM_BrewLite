@@ -4,17 +4,13 @@
  * CheckoutContext
  * ───────────────
  * Quản lý trạng thái luồng đặt hàng (Checkout Flow):
- * 1. Ẩn / hiện thanh Stepper (chỉ hiện khi click vào Giỏ hàng hoặc Đăng nhập).
- * 2. Đổi chỗ linh hoạt giữa Giỏ hàng và Tài khoản:
- *    - Chọn Giỏ hàng trước:  1. Giỏ hàng  -> 2. Tài khoản -> 3. Thanh toán -> 4. Xác nhận
- *    - Chọn Đăng nhập trước: 1. Tài khoản -> 2. Giỏ hàng  -> 3. Thanh toán -> 4. Xác nhận
- * 3. Ràng buộc điều kiện:
- *    - Bước 3 (Thanh toán): Chỉ truy cập được khi CẢ Giỏ hàng (có món) VÀ Tài khoản (đã đăng nhập) đã hoàn thành.
- *    - Bước 4 (Xác nhận): Chỉ truy cập được khi Bước 3 (Thanh toán) đã hoàn thành.
+ * 1. Thanh Stepper từ 1 đến 4 CHỈ hiện khi người dùng đã đăng nhập thành công.
+ * 2. Khóa phần 1 (bước đầu tiên) không thể can thiệp lại.
+ * 3. Ràng buộc điều kiện thanh toán và xác nhận.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthContext';
 import { useCart } from './CartContext';
 
@@ -22,33 +18,22 @@ const CheckoutContext = createContext(null);
 
 export function CheckoutProvider({ children }) {
   const router = useRouter();
-  const pathname = usePathname();
   const { user } = useAuth();
   const { cartItems, itemCount } = useCart();
 
-  // 1. Trạng thái ẩn/hiện stepper (mặc định ẩn khi mới vào web)
-  const [stepperVisible, setStepperVisible] = useState(false);
-
-  // 2. Thứ tự ưu tiên (bước nào được chọn trước: 'cart' | 'account')
+  // Thứ tự ưu tiên bước
   const [firstStep, setFirstStep] = useState('cart');
 
-  // 3. Trạng thái đã hoàn tất thanh toán
+  // Trạng thái đã hoàn tất thanh toán
   const [paymentCompleted, setPaymentCompleted] = useState(false);
 
-  // Tự động bật stepper nếu đang ở trong các trang checkout
-  useEffect(() => {
-    if (pathname && (
-      pathname.includes('/checkout/') ||
-      pathname === '/login' ||
-      pathname === '/register'
-    )) {
-      setStepperVisible(true);
-    }
-  }, [pathname]);
-
-  // Kiểm tra trạng thái hoàn thành của từng bước
+  // Kiểm tra trạng thái hoàn thành
   const isCartCompleted = itemCount > 0;
   const isAccountCompleted = Boolean(user);
+
+  // Thanh stepper từ 1 đến 4 CHỈ HIỆN khi người dùng đăng nhập thành công
+  const stepperVisible = isAccountCompleted;
+  const setStepperVisible = useCallback(() => {}, []);
 
   /**
    * Danh sách 4 bước động dựa trên firstStep
@@ -83,19 +68,19 @@ export function CheckoutProvider({ children }) {
       ];
     }
 
-    // Mặc định: Giỏ hàng trước
+    // Mặc định: Tài khoản trước (khóa), Giỏ hàng sau
     return [
-      {
-        key: 'cart',
-        label: 'Giỏ hàng',
-        href: '/checkout/cart',
-        isCompleted: isCartCompleted,
-      },
       {
         key: 'account',
         label: 'Tài khoản',
         href: '/checkout/account',
         isCompleted: isAccountCompleted,
+      },
+      {
+        key: 'cart',
+        label: 'Giỏ hàng',
+        href: '/checkout/cart',
+        isCompleted: isCartCompleted,
       },
       {
         key: 'payment',
@@ -117,6 +102,15 @@ export function CheckoutProvider({ children }) {
    */
   const checkStepAccess = useCallback(
     (targetKey) => {
+      const steps = getSteps();
+      // Khóa phần 1 (bước đầu tiên) - không thể can thiệp
+      if (steps[0] && targetKey === steps[0].key) {
+        return {
+          allowed: false,
+          reason: `Bước 1 (${steps[0].label}) đã hoàn thành và được khóa, không thể can thiệp lại.`,
+        };
+      }
+
       if (targetKey === 'cart' || targetKey === 'account') {
         return { allowed: true };
       }
@@ -133,7 +127,7 @@ export function CheckoutProvider({ children }) {
           return {
             allowed: false,
             reason: 'Vui lòng đăng nhập hoặc tạo tài khoản trước khi tiến hành thanh toán.',
-            redirectTo: '/checkout/account',
+            redirectTo: '/login',
           };
         }
         return { allowed: true };
@@ -152,7 +146,7 @@ export function CheckoutProvider({ children }) {
 
       return { allowed: true };
     },
-    [isCartCompleted, isAccountCompleted, paymentCompleted]
+    [getSteps, isCartCompleted, isAccountCompleted, paymentCompleted]
   );
 
   /**
@@ -160,7 +154,6 @@ export function CheckoutProvider({ children }) {
    */
   const navigateToStep = useCallback(
     (targetKey) => {
-      setStepperVisible(true);
       const access = checkStepAccess(targetKey);
 
       if (!access.allowed) {
@@ -183,11 +176,11 @@ export function CheckoutProvider({ children }) {
 
   /**
    * Kích hoạt khi người dùng click vào nút Đăng nhập ở Header
+   * Luôn chuyển dứt khoát về trang /login
    */
   const startAuthFlow = useCallback(() => {
     setFirstStep('account');
-    setStepperVisible(true);
-    router.push('/checkout/account');
+    router.push('/login');
   }, [router]);
 
   /**
@@ -195,7 +188,6 @@ export function CheckoutProvider({ children }) {
    */
   const startCartFlow = useCallback(() => {
     setFirstStep('cart');
-    setStepperVisible(true);
     router.push('/checkout/cart');
   }, [router]);
 
@@ -207,7 +199,6 @@ export function CheckoutProvider({ children }) {
   /** Reset lại toàn bộ tiến trình khi hoàn tất */
   const resetCheckout = useCallback(() => {
     setPaymentCompleted(false);
-    setStepperVisible(false);
   }, []);
 
   return (

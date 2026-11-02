@@ -7,12 +7,15 @@ import styles from './PaymentView.module.css';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCheckout } from '../../context/CheckoutContext';
+import { orderService } from '../../services/orderService';
+import { paymentService } from '../../services/paymentService';
 
 export default function PaymentView() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { cartItems, itemCount, totalAmount } = useCart();
-  const { markPaymentComplete, isCartCompleted, isAccountCompleted } = useCheckout();
+  const { user, token } = useAuth();
+  const { cartItems, itemCount, totalAmount, clearCart } = useCart();
+  const { markPaymentComplete, isCartCompleted, isAccountCompleted } =
+    useCheckout();
 
   useEffect(() => {
     if (!isCartCompleted) {
@@ -31,54 +34,154 @@ export default function PaymentView() {
   const [fullName, setFullName] = useState(user?.name || user?.fullName || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [email, setEmail] = useState(user?.email || '');
+
+  useEffect(() => {
+    if (user) {
+      if (!fullName) setFullName(user.name || user.fullName || '');
+      if (!phone && user.phone) setPhone(user.phone);
+      if (!email && user.email) setEmail(user.email);
+    }
+  }, [user]);
+
   const [store, setStore] = useState('BrewLite Nguyễn Huệ · Quận 1');
   const [note, setNote] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('momo'); // 'momo' | 'card'
+  /**
+   * paymentMethod: 'WALLET' (Ví điện tử) | 'CARD' (Thẻ ngân hàng)
+   * Khớp với enum PaymentMethod trong Prisma schema và CreatePaymentDto.
+   */
+  const [paymentMethod, setPaymentMethod] = useState('WALLET');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showFailedNotice, setShowFailedNotice] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const formatPrice = (val) => new Intl.NumberFormat('vi-VN').format(val) + ' VNĐ';
+  const formatPrice = (val) =>
+    new Intl.NumberFormat('vi-VN').format(val) + ' VNĐ';
 
-  const handlePay = () => {
+  const handlePay = async () => {
     // Validation cơ bản
-    if (!fullName.trim()) { alert('Vui lòng nhập họ và tên.'); return; }
-    if (!phone.trim()) { alert('Vui lòng nhập số điện thoại.'); return; }
-    if (!email.trim()) { alert('Vui lòng nhập địa chỉ email.'); return; }
-
-    setIsSubmitting(true);
-    markPaymentComplete();
-
-    // Save order data for confirmation view
-    if (typeof window !== 'undefined') {
-      const now = new Date();
-      const pad = (n) => String(n).padStart(2, '0');
-      const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} · ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      const orderCode = '#BL-' + Math.floor(1000 + Math.random() * 9000);
-
-      const orderInfo = {
-        code: orderCode,
-        total: formatPrice(totalAmount),
-        itemCount,
-        items: cartItems,
-        method: paymentMethod === 'momo' ? 'Ví MoMo · Sandbox' : 'Thẻ ngân hàng',
-        date: dateStr,
-        customerName: fullName,
-        customerPhone: phone,
-      };
-      sessionStorage.setItem('brewlite_last_order', JSON.stringify(orderInfo));
+    if (!fullName.trim()) {
+      alert('Vui lòng nhập họ và tên.');
+      return;
+    }
+    if (!phone.trim()) {
+      alert('Vui lòng nhập số điện thoại.');
+      return;
+    }
+    if (!email.trim()) {
+      alert('Vui lòng nhập địa chỉ email.');
+      return;
     }
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setIsSubmitting(true);
+    setShowFailedNotice(false);
+    setErrorMessage('');
+
+    try {
+      // ── Bước 1: Tạo đơn hàng (POST /orders) ────────────────────────────────
+      let orderId;
+
+      // Nếu đã login và có token thật → dùng API thật
+      // Nếu token là mock (prefix 'mock-jwt') → dùng mock order ID
+      const isRealToken =
+        token && !token.startsWith('mock-jwt-token-');
+
+      if (isRealToken) {
+        const orderResult = await orderService.createOrder(
+          {
+            subtotal: totalAmount,
+            total: totalAmount,
+            discount: 0,
+          },
+          token,
+        );
+        orderId = orderResult.order?.id;
+        if (!orderId) throw new Error('Không thể tạo đơn hàng.');
+      } else {
+        // Chế độ mock: dùng orderId cố định (không kết nối DB)
+        orderId = null;
+      }
+
+      // ── Bước 2: Thanh toán (POST /payments) ─────────────────────────────────
+      const idempotencyKey = paymentService.getOrCreateIdempotencyKey();
+
+      let orderStatus = 'PAID';
+      let transactionRef = null;
+
+      if (isRealToken && orderId) {
+        const payResult = await paymentService.pay(
+          {
+            orderId,
+            amount: totalAmount,
+            method: paymentMethod,
+            idempotencyKey,
+          },
+          token,
+        );
+        orderStatus = payResult.orderStatus;
+        transactionRef = payResult.payment?.transactionRef;
+      } else {
+        // Mock mode: simulate 90% success
+        const mockSuccess = Math.random() < 0.9;
+        orderStatus = mockSuccess ? 'PAID' : 'PAYMENT_FAILED';
+        transactionRef = mockSuccess
+          ? `MOCK-TXN-${Date.now()}-${idempotencyKey.slice(0, 8)}`
+          : null;
+      }
+
+      // ── Bước 3: Xử lý kết quả ────────────────────────────────────────────────
+      if (orderStatus === 'PAYMENT_FAILED') {
+        // Đơn chuyển PAYMENT_FAILED – giữ giỏ hàng, hiện thông báo lỗi
+        paymentService.resetPaymentKey();
+        setShowFailedNotice(true);
+        setErrorMessage(
+          'Giao dịch bị từ chối bởi cổng thanh toán. Giỏ hàng được giữ nguyên. Bạn có thể thử lại.',
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      // PAID – lưu thông tin đơn, xóa key, điều hướng
+      paymentService.resetPaymentKey();
+      markPaymentComplete();
+
+      if (typeof window !== 'undefined') {
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} · ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const orderCode =
+          orderId ? `#${orderId}` : '#BL-' + Math.floor(1000 + Math.random() * 9000);
+
+        const orderInfo = {
+          code: orderCode,
+          total: formatPrice(totalAmount),
+          itemCount,
+          items: cartItems,
+          method: paymentMethod === 'WALLET' ? 'Ví điện tử · Sandbox' : 'Thẻ ngân hàng · Sandbox',
+          date: dateStr,
+          customerName: fullName,
+          customerPhone: phone,
+          transactionRef,
+          orderStatus,
+        };
+        sessionStorage.setItem('brewlite_last_order', JSON.stringify(orderInfo));
+      }
+
+      clearCart();
       router.push('/checkout/confirmation');
-    }, 400);
+    } catch (err) {
+      // Lỗi network hoặc server error
+      setShowFailedNotice(true);
+      setErrorMessage(
+        err?.message || 'Đã xảy ra lỗi kết nối. Vui lòng thử lại.',
+      );
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className={styles.container}>
       {/* Page Header */}
       <div className={styles.headerTitleGroup}>
-        <div className={styles.sectionBadge}>06 / THANH TOÁN</div>
         <h1 className={styles.pageTitle}>Sắp đến giờ cà phê.</h1>
         <p className={styles.pageSubtitle}>
           Nhận tại quầy, thanh toán không tiền mặt. Kiểm tra thông tin lần cuối nhé.
@@ -144,7 +247,6 @@ export default function PaymentView() {
                 </svg>
                 <span>Nhận tại cửa hàng</span>
               </div>
-              <span className={styles.mvpBadge}>MVP · Chỉ nhận tại quầy</span>
             </div>
 
             <div className={styles.formGroup}>
@@ -205,10 +307,10 @@ export default function PaymentView() {
             </div>
 
             <div className={styles.paymentMethodsGrid}>
-              {/* Option 1: E-Wallet (MoMo) */}
+              {/* Option 1: E-Wallet */}
               <div
-                className={`${styles.paymentRadioCard} ${paymentMethod === 'momo' ? styles.paymentCardActive : ''}`}
-                onClick={() => setPaymentMethod('momo')}
+                className={`${styles.paymentRadioCard} ${paymentMethod === 'WALLET' ? styles.paymentCardActive : ''}`}
+                onClick={() => setPaymentMethod('WALLET')}
               >
                 <div className={styles.methodLeft}>
                   <div className={styles.methodIconBox}>
@@ -223,15 +325,15 @@ export default function PaymentView() {
                   </div>
                 </div>
 
-                <div className={`${styles.radioIndicator} ${paymentMethod === 'momo' ? styles.radioIndicatorActive : ''}`}>
-                  {paymentMethod === 'momo' && <div className={styles.radioDot} />}
+                <div className={`${styles.radioIndicator} ${paymentMethod === 'WALLET' ? styles.radioIndicatorActive : ''}`}>
+                  {paymentMethod === 'WALLET' && <div className={styles.radioDot} />}
                 </div>
               </div>
 
               {/* Option 2: Bank Card */}
               <div
-                className={`${styles.paymentRadioCard} ${paymentMethod === 'card' ? styles.paymentCardActive : ''}`}
-                onClick={() => setPaymentMethod('card')}
+                className={`${styles.paymentRadioCard} ${paymentMethod === 'CARD' ? styles.paymentCardActive : ''}`}
+                onClick={() => setPaymentMethod('CARD')}
               >
                 <div className={styles.methodLeft}>
                   <div className={styles.methodIconBox}>
@@ -246,8 +348,8 @@ export default function PaymentView() {
                   </div>
                 </div>
 
-                <div className={`${styles.radioIndicator} ${paymentMethod === 'card' ? styles.radioIndicatorActive : ''}`}>
-                  {paymentMethod === 'card' && <div className={styles.radioDot} />}
+                <div className={`${styles.radioIndicator} ${paymentMethod === 'CARD' ? styles.radioIndicatorActive : ''}`}>
+                  {paymentMethod === 'CARD' && <div className={styles.radioDot} />}
                 </div>
               </div>
             </div>
@@ -324,7 +426,7 @@ export default function PaymentView() {
             Giá đã gồm VAT. Không có phí giao hàng.
           </div>
 
-          {/* Mock failed notice box matching image */}
+          {/* Payment failed notice */}
           {showFailedNotice && (
             <div className={styles.retryAlertBox}>
               <div className={styles.retryIconWrapper}>
@@ -335,7 +437,8 @@ export default function PaymentView() {
                 </svg>
               </div>
               <div className={styles.retryText}>
-                Trạng thái mẫu: lần thử trước thất bại. Giỏ hàng được giữ nguyên. Thử lại không tạo thêm đơn; nếu đã bị trừ tiền, hãy kiểm tra trạng thái trước khi thử lại.
+                {errorMessage ||
+                  'Thanh toán thất bại. Đơn hàng chuyển sang trạng thái PAYMENT_FAILED. Giỏ hàng được giữ nguyên — bạn có thể thử lại.'}
               </div>
             </div>
           )}

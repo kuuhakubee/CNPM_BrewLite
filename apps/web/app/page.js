@@ -3,11 +3,14 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 
 // Toggle flag: true = mock data (khi Task 2 backend chưa xong), false = gọi API NestJS thật
 const USE_MOCK = true;
 
-// ─── Color Tokens (khớp 100% Figma) ──────────────────────────
+// ─── Color Tokens (khớp 100% Figma & Design System) ──────────
 const C = {
   bg: "#f7f5ef",
   banner: "#285446",
@@ -19,9 +22,10 @@ const C = {
   border: "#dedcd2",
   white: "#fffefa",
   tagBeige: "#ede7dc",
+  accentWarm: "#dfd7ca",
 };
 
-// ─── Mock Data mẫu (chuẩn bị sẵn) ─────────────────────────────
+// ─── Mock Data mẫu ───────────────────────────────────────────
 const MOCK_PRODUCTS = [
   {
     id: "1",
@@ -30,8 +34,7 @@ const MOCK_PRODUCTS = [
     price: 49000,
     description: "Espresso đậm, hậu vị hạt dịu êm",
     badge: "Được yêu thích",
-    image:
-      "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80",
+    image: "/images/latte-yen-mach.png",
   },
   {
     id: "2",
@@ -39,9 +42,8 @@ const MOCK_PRODUCTS = [
     category: "Cà phê",
     price: 45000,
     description: "Ủ lạnh 16 giờ, thanh mát tự nhiên",
-    badge: null,
-    image:
-      "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&q=80",
+    badge: "Bán chạy",
+    image: "/images/cold-brew.png",
   },
   {
     id: "3",
@@ -76,7 +78,11 @@ function fmt(n) {
   return n.toLocaleString("vi-VN") + " VNĐ";
 }
 
-export default function MenuPage() {
+export default function HomePage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { itemCount, formattedTotal } = useCart();
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -135,70 +141,306 @@ export default function MenuPage() {
     return counts;
   }, [products]);
 
+  const scrollToMenu = () => {
+    const el = document.getElementById("today-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const displayName = user
+    ? user.fullName || user.name || "Minh Anh"
+    : null;
+
   return (
     <div
       style={{
         flex: 1,
-        padding: "36px 64px 60px",
+        padding: "24px 32px 64px",
         display: "flex",
         flexDirection: "column",
-        gap: "30px",
-        maxWidth: "1440px",
+        gap: "36px",
+        maxWidth: "1240px",
         margin: "0 auto",
         width: "100%",
         boxSizing: "border-box",
       }}
     >
-      {/* Bối cảnh nhận hàng (Figma) */}
-      <div
+      {/* ══════════════════════════════════════════════════════════════
+          GIAO DIỆN CHUNG KHI MỚI VÀO WEB (HERO & QUICK ACTIONS)
+          Có các nút điều hướng sang Đăng nhập, Giỏ hàng
+         ══════════════════════════════════════════════════════════════ */}
+      <section
         style={{
+          background: "linear-gradient(135deg, #fffefa 0%, #f6f3eb 100%)",
+          border: `1px solid ${C.border}`,
+          borderRadius: "20px",
+          padding: "36px 40px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: "40px",
           flexWrap: "wrap",
-          gap: "12px",
+          boxShadow: "0 6px 20px rgba(40, 84, 70, 0.04)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 21c-4.418-5.333-7-9.5-7-13a7 7 0 1114 0c0 3.5-2.582 7.667-7 13z"
-              stroke={C.primary}
-              strokeWidth="1.5"
-            />
-            <circle cx="12" cy="8" r="2.5" stroke={C.primary} strokeWidth="1.5" />
-          </svg>
-          <span style={{ fontSize: "13px", color: C.text }}>
-            Nhận tại BrewLite An Dương Vương · Phường Chợ Quán
-          </span>
-          <span
+        {/* Cột trái: Giới thiệu & Các nút điều hướng nhanh */}
+        <div style={{ flex: "1 1 520px", display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: C.primaryLight,
+                color: C.primary,
+                borderRadius: "100px",
+                padding: "6px 14px",
+                fontSize: "12px",
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                marginBottom: "14px",
+              }}
+            >
+              <span>🌿</span>
+              <span>BREWLITE · COFFEE & TEA</span>
+            </div>
+
+            <h1
+              style={{
+                margin: "0 0 12px",
+                fontSize: "36px",
+                fontWeight: 600,
+                color: C.text,
+                lineHeight: "46px",
+                fontFamily: 'serif, Georgia, "Times New Roman"',
+              }}
+            >
+              Cà phê chuẩn vị, đặt trước nhận ngay.
+            </h1>
+
+            <p
+              style={{
+                margin: 0,
+                fontSize: "15px",
+                color: C.textMuted,
+                lineHeight: "24px",
+                maxWidth: "540px",
+              }}
+            >
+              Chào mừng bạn đến với BrewLite. Thưởng thức cà phê nguyên bản được pha chế tỉ mỉ, đặt trước online và ghé quầy nhận ngay chỉ sau 15–20 phút mà không cần xếp hàng.
+            </p>
+          </div>
+
+          <div
             style={{
-              fontSize: "13px",
-              fontWeight: 600,
-              color: C.primary,
-              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              flexWrap: "wrap",
+              paddingTop: "6px",
             }}
           >
-            Thay đổi ↗
-          </span>
+            {/* 1. NÚT ĐIỀU HƯỚNG SANG ĐĂNG NHẬP / TÀI KHOẢN */}
+            <button
+              type="button"
+              id="heroAuthBtn"
+              onClick={() => router.push("/login")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                backgroundColor: C.white,
+                color: C.primary,
+                border: `1.5px solid ${C.primary}`,
+                padding: "11px 20px",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = C.primaryLight;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = C.white;
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>{displayName ? `Tài khoản: ${displayName}` : "Đăng nhập / Đăng ký"}</span>
+            </button>
+
+            {/* 2. NÚT ĐIỀU HƯỚNG SANG GIỎ HÀNG */}
+            <button
+              type="button"
+              id="heroCartBtn"
+              onClick={() => router.push("/cart")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                backgroundColor: "#e6efe9",
+                color: C.primary,
+                border: "1px solid #c9decb",
+                padding: "11px 20px",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#d8e9dc";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#e6efe9";
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+              <span>Giỏ hàng ({itemCount} món)</span>
+            </button>
+
+          
+            {/* 4. NÚT CUỘN XUỐNG CHỌN MÓN */}
+            <button
+              type="button"
+              onClick={scrollToMenu}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                backgroundColor: C.primary,
+                color: "#ffffff",
+                border: "none",
+                padding: "11px 20px",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+                boxShadow: "0 4px 12px rgba(40, 84, 70, 0.2)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = C.primaryHover;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = C.primary;
+              }}
+            >
+              <span>Chọn món ngay</span>
+              <span>↓</span>
+            </button>
+          </div>
+
+          {/* Quick Badges Highlight */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "18px",
+              flexWrap: "wrap",
+              borderTop: `1px solid ${C.border}`,
+              paddingTop: "16px",
+              marginTop: "4px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: C.text }}>
+              <span>🌱</span>
+              <span>Hạt cà phê nguyên bản</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: C.text }}>
+              <span>🛡</span>
+              <span>Thanh toán tiện lợi và nhanh chóng</span>
+            </div>
+          </div>
         </div>
 
+        {/* Cột phải: Featured Signature Drink Box */}
         <div
           style={{
-            background: C.primaryLight,
-            borderRadius: "100px",
-            padding: "5px 12px",
-            fontSize: "12px",
-            fontWeight: 600,
-            color: C.primary,
+            flex: "0 1 340px",
+            backgroundColor: C.white,
+            borderRadius: "16px",
+            border: `1px solid ${C.border}`,
+            padding: "20px",
+            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.05)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "14px",
           }}
         >
-          Nhận tại quầy · 15–20 phút
+          <div style={{ position: "relative", width: "100%", height: "160px", borderRadius: "12px", overflow: "hidden" }}>
+            <img
+              src="/images/latte-yen-mach.png"
+              alt="Món đặc trưng"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: "10px",
+                left: "10px",
+                backgroundColor: C.primary,
+                color: "#ffffff",
+                padding: "4px 10px",
+                borderRadius: "9999px",
+                fontSize: "11px",
+                fontWeight: 600,
+              }}
+            >
+              Món đặc trưng hôm nay
+            </div>
+          </div>
+
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <h3 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 600, color: C.text }}>
+                Latte yến mạch
+              </h3>
+              <span style={{ fontSize: "15px", fontWeight: 700, color: C.primary }}>
+                49.000 VNĐ
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: "12.5px", color: C.textMuted, lineHeight: "18px" }}>
+              Espresso đậm đà kết hợp cùng sữa yến mạch béo nhẹ, thơm ngậy tự nhiên.
+            </p>
+          </div>
+
+          <Link
+            href="/product/1"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              backgroundColor: C.primaryLight,
+              color: C.primary,
+              textDecoration: "none",
+              padding: "10px",
+              borderRadius: "8px",
+              fontSize: "13px",
+              fontWeight: 600,
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span>Tùy chỉnh & Đặt món này</span>
+            <span>→</span>
+          </Link>
         </div>
-      </div>
+      </section>
 
       {/* Tiêu đề trang & Thanh tìm kiếm */}
       <div
+        id="today-section"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -208,35 +450,25 @@ export default function MenuPage() {
         }}
       >
         <div>
-          <p
-            style={{
-              margin: "0 0 8px",
-              fontSize: "11px",
-              fontWeight: 700,
-              color: C.primary,
-              letterSpacing: "0.06em",
-            }}
-          >
-            01 / THỰC ĐƠN
-          </p>
-          <h1
+          <h2
             className="font-serif"
             style={{
               margin: "0 0 10px",
-              fontSize: "38px",
+              fontSize: "36px",
               fontWeight: 500,
               color: C.text,
-              lineHeight: "49.4px",
+              lineHeight: "46px",
+              fontFamily: 'serif, Georgia, "Times New Roman"',
             }}
           >
             Hôm nay, bạn uống gì?
-          </h1>
+          </h2>
           <p
             style={{
               margin: 0,
               fontSize: "15px",
               color: C.textMuted,
-              lineHeight: "23.3px",
+              lineHeight: "23px",
             }}
           >
             Chọn một món yêu thích. Tùy chỉnh theo đúng gu của bạn.
@@ -283,7 +515,6 @@ export default function MenuPage() {
               fontSize: "14px",
               color: C.text,
               width: "100%",
-              fontFamily: "var(--font-sans), sans-serif",
             }}
           />
           {searchTerm ? (
@@ -310,7 +541,7 @@ export default function MenuPage() {
                 borderRadius: "4px",
               }}
             >
-              ⌘ K
+              ⌘
             </span>
           )}
         </div>
@@ -387,7 +618,7 @@ export default function MenuPage() {
             );
           })}
 
-          {/* Ghi chú menu (theo Figma) */}
+          {/* Ghi chú menu */}
           <div
             style={{
               background: C.tagBeige,
@@ -441,7 +672,7 @@ export default function MenuPage() {
               alignItems: "center",
             }}
           >
-            <h2
+            <h3
               style={{
                 margin: 0,
                 fontSize: "14px",
@@ -450,7 +681,7 @@ export default function MenuPage() {
               }}
             >
               {CATEGORIES.find((c) => c.id === selectedCategory)?.name || "Thực đơn"}
-            </h2>
+            </h3>
             <span style={{ fontSize: "12px", color: C.textMuted }}>
               {filteredProducts.length} món · Giá từ size nhỏ
             </span>
@@ -559,7 +790,7 @@ export default function MenuPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
                 gap: "22px",
               }}
             >
@@ -585,12 +816,12 @@ export default function MenuPage() {
                         "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease",
                     }}
                   >
-                    {/* Ảnh sản phẩm + Zoom nhẹ khi Hover */}
+                    {/* Ảnh sản phẩm */}
                     <div
                       style={{
                         position: "relative",
                         width: "100%",
-                        height: "222px",
+                        height: "220px",
                         overflow: "hidden",
                       }}
                     >
@@ -658,7 +889,7 @@ export default function MenuPage() {
                         {p.description}
                       </p>
 
-                      {/* Giá và nút chọn món -> link sang Task 4 */}
+                      {/* Giá và nút chọn món */}
                       <div
                         style={{
                           display: "flex",
@@ -696,8 +927,7 @@ export default function MenuPage() {
                             boxShadow: isHovered
                               ? "0 4px 12px rgba(40, 84, 70, 0.25)"
                               : "none",
-                            transition:
-                              "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                            transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                           }}
                         >
                           <span>Chọn món</span>

@@ -67,11 +67,29 @@
   font-weight: 500;
   color: #4a554e;
   text-decoration: none;
-  transition: color 0.15s ease;
+  transition: all 0.15s ease;
+  position: relative;
+  padding: 4px 2px;
 }
 
 .navLink:hover {
   color: #1e382b;
+}
+
+.navLinkActive {
+  color: #1e382b;
+  font-weight: 600;
+}
+
+.navLinkActive::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background-color: #285446;
+  border-radius: 2px;
 }
 
 .headerRight {
@@ -110,6 +128,13 @@
   font-size: 14px;
   font-weight: 600;
   user-select: none;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.cartPill:hover {
+  background-color: #d8e8dc;
 }
 
 /* Footer */

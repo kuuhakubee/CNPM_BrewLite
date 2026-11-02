@@ -26,10 +26,22 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setIsLoading(true);
     try {
-      // Mock login response (in production: await authService.login(email, password))
+      // Lấy thông tin họ tên & phone nếu đã từng đăng ký
+      let name = email.split('@')[0];
+      let phone = '0901 234 567';
+      try {
+        const storedUsers = JSON.parse(localStorage.getItem('brewlite_registered_users') || '[]');
+        const found = storedUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+        if (found) {
+          name = found.name || name;
+          phone = found.phone || phone;
+        }
+      } catch {}
+
       const mockUser = {
         email,
-        name: email.split('@')[0],
+        name,
+        phone,
         role: 'CUSTOMER',
       };
       const mockToken = 'mock-jwt-token-' + Date.now();
@@ -52,11 +64,13 @@ export function AuthProvider({ children }) {
         phone: userData.phone,
         role: 'CUSTOMER',
       };
-      const mockToken = 'mock-jwt-token-' + Date.now();
-      setUser(newUser);
-      setToken(mockToken);
-      localStorage.setItem('brewlite_user', JSON.stringify(newUser));
-      localStorage.setItem('brewlite_token', mockToken);
+      // Lưu vào danh sách tài khoản đã đăng ký (không tự động đăng nhập để người dùng dùng nút Đăng nhập)
+      try {
+        const storedUsers = JSON.parse(localStorage.getItem('brewlite_registered_users') || '[]');
+        const updated = storedUsers.filter((u) => u.email.toLowerCase() !== userData.email.toLowerCase()).concat([newUser]);
+        localStorage.setItem('brewlite_registered_users', JSON.stringify(updated));
+      } catch {}
+
       return { success: true, user: newUser };
     } finally {
       setIsLoading(false);
@@ -66,8 +80,10 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('brewlite_user');
-    localStorage.removeItem('brewlite_token');
+    try {
+      localStorage.removeItem('brewlite_user');
+      localStorage.removeItem('brewlite_token');
+    } catch {}
   };
 
   return (

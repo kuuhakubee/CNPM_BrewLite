@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Image from 'next/image';
@@ -33,7 +33,6 @@ export default function CartView() {
     <div className={styles.container}>
       {/* Page Header */}
       <div className={styles.headerTitleGroup}>
-        <div className={styles.sectionBadge}>03 / GIỎ HÀNG</div>
         <h1 className={styles.pageTitle}>Một giỏ đầy cảm hứng.</h1>
         <p className={styles.pageSubtitle}>
           {itemCount > 0
