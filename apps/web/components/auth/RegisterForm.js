@@ -165,6 +165,7 @@ export default function RegisterForm({ onSwitchToLogin, onSuccess }) {
         onSuccess();
       } else {
         alert(`Tạo tài khoản thành công cho: ${fullName} (${email})!`);
+        window.location.href = '/';
       }
     } catch (err) {
       setGeneralError(err.message || 'Đăng ký không thành công. Vui lòng thử lại.');

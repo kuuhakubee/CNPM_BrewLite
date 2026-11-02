@@ -23,7 +23,13 @@ export class ProductsService {
    * Trả về một sản phẩm theo id, không tồn tại thì ném NotFoundException.
    */
   async findOne(id: number) {
-    const product = await this.prisma.product.findUnique({ where: { id } });
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        sizes: { orderBy: { priceDelta: 'asc' } },
+        toppings: { where: { isAvailable: true }, orderBy: { name: 'asc' } },
+      },
+    });
 
     if (!product) {
       throw new NotFoundException(`Product with id "${id}" not found`);
@@ -36,7 +42,7 @@ export class ProductsService {
    * Map model Prisma -> DTO JSON thuần (price Decimal -> Number để JSON serialize đúng).
    */
   private toProductDto(p: any) {
-    return {
+    const result: any = {
       id: p.id,
       name: p.name,
       description: p.description,
@@ -46,5 +52,22 @@ export class ProductsService {
       stock: p.stock,
       isAvailable: p.isAvailable,
     };
+    if (p.sizes) {
+      result.sizes = p.sizes.map((s: any) => ({
+        code: s.code,
+        name: s.name,
+        priceDelta: s.priceDelta ? Number(s.priceDelta.toNumber ? s.priceDelta.toNumber() : s.priceDelta) : 0,
+        isDefault: s.isDefault,
+      }));
+    }
+    if (p.toppings) {
+      result.toppings = p.toppings.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        price: t.price ? Number(t.price.toNumber ? t.price.toNumber() : t.price) : 0,
+        isAvailable: t.isAvailable,
+      }));
+    }
+    return result;
   }
 }

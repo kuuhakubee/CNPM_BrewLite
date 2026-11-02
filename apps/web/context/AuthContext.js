@@ -10,7 +10,6 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Check local storage for persistent mock session
     try {
       const savedUser = localStorage.getItem('brewlite_user');
       const savedToken = localStorage.getItem('brewlite_token');
@@ -19,25 +18,26 @@ export function AuthProvider({ children }) {
         setToken(savedToken);
       }
     } catch {
-      // ignore SSR or local storage error
+      // ignore
     }
   }, []);
 
   const login = async (email, password) => {
     setIsLoading(true);
     try {
-      // Mock login response (in production: await authService.login(email, password))
-      const mockUser = {
-        email,
-        name: email.split('@')[0],
-        role: 'CUSTOMER',
-      };
-      const mockToken = 'mock-jwt-token-' + Date.now();
-      setUser(mockUser);
-      setToken(mockToken);
-      localStorage.setItem('brewlite_user', JSON.stringify(mockUser));
-      localStorage.setItem('brewlite_token', mockToken);
-      return { success: true, user: mockUser };
+      const res = await fetch('http://localhost:4000/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Đăng nhập thất bại');
+      setUser(data.user);
+      setToken(data.accessToken);
+      localStorage.setItem('brewlite_user', JSON.stringify(data.user));
+      localStorage.setItem('brewlite_token', data.accessToken);
+      return { success: true, user: data.user };
     } finally {
       setIsLoading(false);
     }
@@ -46,18 +46,24 @@ export function AuthProvider({ children }) {
   const register = async (userData) => {
     setIsLoading(true);
     try {
-      const newUser = {
-        email: userData.email,
-        name: userData.fullName,
-        phone: userData.phone,
-        role: 'CUSTOMER',
-      };
-      const mockToken = 'mock-jwt-token-' + Date.now();
-      setUser(newUser);
-      setToken(mockToken);
-      localStorage.setItem('brewlite_user', JSON.stringify(newUser));
-      localStorage.setItem('brewlite_token', mockToken);
-      return { success: true, user: newUser };
+      const res = await fetch('http://localhost:4000/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userData.email,
+          password: userData.password,
+          fullName: userData.fullName,
+          phone: userData.phone || '',
+        }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Đăng ký thất bại');
+      setUser(data.user);
+      setToken(data.accessToken);
+      localStorage.setItem('brewlite_user', JSON.stringify(data.user));
+      localStorage.setItem('brewlite_token', data.accessToken);
+      return { success: true, user: data.user };
     } finally {
       setIsLoading(false);
     }
@@ -79,8 +85,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }

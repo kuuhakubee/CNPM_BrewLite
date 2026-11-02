@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 // ─── Color Tokens (từ Figma) ────────────────────────────────
 const C = {
@@ -136,7 +136,7 @@ function Divider() {
 
 // ─── Main Component ───────────────────────────────────────────
 export default function ProductDetail({ params }) {
-  const { id } = params;
+  const { ID: productId } = params;
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -154,15 +154,56 @@ export default function ProductDetail({ params }) {
           setProduct(MOCK_PRODUCT);
         } else {
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${id}`,
+            `http://localhost:4000/api/v1/products/${productId}`,
           );
           if (!res.ok) throw new Error("Network error");
           const data = await res.json();
-          setProduct(data);
-          setSizeCode(data.sizes[0].code);
-          setSugarCode(data.sugarLevels[2]?.code ?? data.sugarLevels[0].code);
-          setIceCode(data.iceLevels[1]?.code ?? data.iceLevels[0].code);
-          setSelectedToppings([data.toppings[0]?.id].filter(Boolean));
+          // Adapter: map real API format to component mock format
+          const adapted = {
+            ...data,
+            id: String(data.id || productId),
+            step: "02 / TÙY CHỌN ĐỒ UỐNG",
+            basePrice: Number(data.price) || 0,
+            baseSizeLabel: `Giá gốc size S · Chưa thêm tùy chọn`,
+            image: data.imageUrl || `https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80`,
+            tags: [
+              { label: "Espresso rang vừa", color: C.primaryLight, textColor: C.primary },
+              { label: "Có caffeine", color: C.tagBeige, textColor: C.textMuted },
+            ],
+            tagline: data.description ? `Đậm một chút, êm thật lâu.` : ``,
+            description: data.description || "",
+            allergyNote: "Có thể chứa sữa và yến mạch. Vui lòng kiểm tra trước khi đặt.",
+            sugarLevels: [
+              { code: "0", label: "0%" },
+              { code: "30", label: "30%" },
+              { code: "50", label: "50%" },
+              { code: "100", label: "100%" },
+            ],
+            iceLevels: [
+              { code: "none", label: "Không đá" },
+              { code: "less", label: "Ít đá" },
+              { code: "normal", label: "Đá thường" },
+            ],
+          };
+          if (data.sizes && Array.isArray(data.sizes)) {
+            adapted.sizes = data.sizes.map((s) => ({
+              code: s.code,
+              label: `${s.code} · +${s.priceDelta ? s.priceDelta.toLocaleString("vi-VN") : 0} VNĐ`,
+              priceDelta: s.priceDelta ? Number(s.priceDelta) : 0,
+            }));
+          }
+          if (data.toppings && Array.isArray(data.toppings)) {
+            adapted.toppings = data.toppings.map((t) => ({
+              id: t.id,
+              name: t.name,
+              price: t.price ? Number(t.price) : 0,
+            }));
+          }
+          setProduct(adapted);
+          setSizeCode(adapted.sizes?.[0]?.code ?? "S");
+          setSugarCode("50");
+          setIceCode("less");
+          setSelectedToppings(adapted.toppings ? [adapted.toppings[0]?.id].filter(Boolean) : []);
         }
       } catch (e) {
         setError(e.message);
@@ -171,7 +212,7 @@ export default function ProductDetail({ params }) {
       }
     }
     fetchProduct();
-  }, [id]);
+  }, [productId]);
 
   const toggleTopping = (toppingId) => {
     setSelectedToppings((prev) =>
