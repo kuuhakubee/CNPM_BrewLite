@@ -3,7 +3,6 @@
 import CheckoutStepper from '../../../components/checkout/CheckoutStepper';
 
 export default function ConfirmationPage() {
-  // Mô phỏng dữ liệu xác nhận từ backend /orders
   const order = {
     code: '#1042',
     status: 'PAID',
@@ -69,8 +68,7 @@ export default function ConfirmationPage() {
             {order.items.map((item, idx) => (
               <div
                 key={idx}
-                style={{
-                  display: 'flex',
+                style={{ display: 'flex',
                   justifyContent: 'space-between',
                   padding: '8px 0',
                   borderBottom: '1px solid #e9ecef',
@@ -101,8 +99,7 @@ export default function ConfirmationPage() {
               {order.total.toLocaleString('vi-VN')}đ
             </span>
           </div>
-
-          <p
+<p
             style={{
               marginTop: '20px',
               color: '#6c757d',

@@ -1,0 +1,445 @@
+.container {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 8px 24px 64px;
+}
+
+/* Status Header */
+.statusHeader {
+  text-align: center;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.checkCircleLarge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #e3ece6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.sectionBadge {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #27523f;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.pageTitle {
+  font-family: var(--font-serif);
+  font-size: 34px;
+  font-weight: 700;
+  color: #19211d;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+
+.pageSubtitle {
+  font-size: 14.5px;
+  color: #5f6c64;
+}
+
+/* Mock Notice Box */
+.mockNoticeBox {
+  background-color: #eaf1ec;
+  border-radius: 12px;
+  padding: 13px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.mockNoticeIcon {
+  color: #27523f;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.mockNoticeText {
+  font-size: 13.5px;
+  color: #27523f;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Main Layout Grid */
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .layoutGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left Column: Receipt Card */
+.receiptCard {
+  background-color: #ffffff;
+  border: 1px solid #e5e8e5;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.receiptTopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.codeLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #768078;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.codeValue {
+  font-size: 24px;
+  font-weight: 800;
+  color: #19211d;
+}
+
+.paidBadge {
+  background-color: #e8efe9;
+  color: #1e382b;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  margin-bottom: 8px;
+}
+
+.metaLabel {
+  color: #768078;
+}
+
+.metaValue {
+  color: #19211d;
+  font-weight: 600;
+}
+
+.divider {
+  height: 1px;
+  background-color: #eae6dc;
+  margin: 16px 0;
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.itemRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.itemImgWrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f2ede5;
+  flex-shrink: 0;
+}
+
+.itemImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.itemPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 20px;
+}
+
+.itemDetails {
+  flex: 1;
+}
+
+.itemName {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #19211d;
+  margin-bottom: 2px;
+}
+
+.itemSpecs {
+  font-size: 12px;
+  color: #5f6c64;
+  line-height: 1.35;
+}
+
+.itemQty {
+  font-size: 12px;
+  color: #849087;
+  margin-top: 2px;
+}
+
+.itemPrice {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #19211d;
+  white-space: nowrap;
+}
+
+.feeRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+  color: #5f6c64;
+  margin-bottom: 8px;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.totalLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: #19211d;
+}
+
+.totalValue {
+  font-size: 22px;
+  font-weight: 800;
+  color: #19211d;
+}
+
+/* Right Column: Status & Tracking */
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.statusCard {
+  background-color: #ffffff;
+  border: 1px solid #e5e8e5;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.statusCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.statusTitle {
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #19211d;
+  margin: 0;
+}
+
+.stepBadge {
+  font-size: 11.5px;
+  font-weight: 600;
+  background-color: #fcf0e4;
+  color: #8c531a;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.statusDescription {
+  font-size: 12.5px;
+  color: #768078;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Timeline */
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timelineItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timelineCircle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid #dbe1dc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #768078;
+  background-color: #ffffff;
+  flex-shrink: 0;
+}
+
+.timelineCircleActive {
+  background-color: #1e382b;
+  border-color: #1e382b;
+  color: #ffffff;
+}
+
+.timelineText {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #768078;
+}
+
+.timelineTextActive {
+  font-weight: 700;
+  color: #19211d;
+}
+
+/* Estimated Time Block */
+.estTimeBlock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.estTimeIconWrapper {
+  color: #1e382b;
+  display: flex;
+  align-items: center;
+}
+
+.estTimeSub {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #768078;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.estTimeValue {
+  font-size: 22px;
+  font-weight: 800;
+  color: #19211d;
+}
+
+/* Store details */
+.storeBlock {
+  background-color: #faf9f5;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.storeName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #19211d;
+  margin-bottom: 2px;
+}
+
+.storeAddress {
+  font-size: 12px;
+  color: #5f6c64;
+  margin-bottom: 4px;
+}
+
+.receiverInfo {
+  font-size: 12px;
+  color: #5f6c64;
+}
+
+/* Action Buttons */
+.actionButtonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.primaryActionBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #1e382b;
+  color: #ffffff;
+  border: none;
+  padding: 13px 20px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.primaryActionBtn:hover {
+  background-color: #274b3a;
+}
+
+.secondaryActionBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  color: #19211d;
+  border: 1px solid #dbe1dc;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.secondaryActionBtn:hover {
+  background-color: #f7f5ef;
+  border-color: #ccd4cd;
+}
+
+.counterNote {
+  font-size: 12px;
+  color: #849087;
+  text-align: center;
+  margin-top: 4px;
+}

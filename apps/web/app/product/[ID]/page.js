@@ -1,4 +1,3 @@
-// apps/web/app/product/[id]/page.js
 "use client";
 
 import { useEffect, useState } from "react";
@@ -76,7 +75,7 @@ function calcPerCup(product, sizeCode, selectedToppings) {
   return product.basePrice + (size?.priceDelta || 0) + toppingTotal;
 }
 
-// ─── Option Button ────────────────────────────────────────────
+// ─── Option Button ────────────────────────────────____________
 function OptionBtn({ selected, onClick, children }) {
   return (
     <button
@@ -91,7 +90,7 @@ function OptionBtn({ selected, onClick, children }) {
         fontWeight: selected ? 600 : 400,
         fontSize: "14px",
         cursor: "pointer",
-        fontFamily: "Inter, sans-serif",
+        fontFamily: "var(--font-sans), sans-serif",
         transition: "all 0.15s",
       }}
     >
@@ -110,7 +109,6 @@ function OptionGroup({ label, children }) {
           fontSize: "14px",
           fontWeight: 600,
           color: C.text,
-          fontFamily: "Inter, sans-serif",
           lineHeight: "21.7px",
         }}
       >
@@ -224,30 +222,13 @@ export default function ProductDetail({ params }) {
     );
   };
 
-  if (loading)
-    return (
-      <p style={{ padding: "2rem", fontFamily: "Inter, sans-serif" }}>
-        Đang tải...
-      </p>
-    );
-  if (error)
-    return (
-      <p
-        style={{
-          padding: "2rem",
-          color: "red",
-          fontFamily: "Inter, sans-serif",
-        }}
-      >
-        Lỗi: {error}
-      </p>
-    );
+  if (loading) return <p style={{ padding: "3rem", textAlign: "center", fontFamily: "Inter, sans-serif" }}>Đang tải...</p>;
+  if (error) return <p style={{ padding: "3rem", color: "red", textAlign: "center", fontFamily: "Inter, sans-serif" }}>Lỗi: {error}</p>;
   if (!product) return null;
 
   const pricePerCup = calcPerCup(product, sizeCode, selectedToppings);
   const totalPrice = pricePerCup * qty;
 
-  // Breakdown string: 49.000 + 6.000 + 10.000 VNĐ
   const selectedSize = product.sizes.find((s) => s.code === sizeCode);
   const breakdownParts = [fmtShort(product.basePrice)];
   if (selectedSize?.priceDelta > 0)
@@ -260,13 +241,17 @@ export default function ProductDetail({ params }) {
   return (
     <div
       style={{
-        fontFamily: "Inter, sans-serif",
-        background: C.bg,
-        minHeight: "100vh",
+        maxWidth: "1440px",
+        margin: "0 auto",
+        width: "100%",
+        padding: "30px 64px 60px",
         display: "flex",
         flexDirection: "column",
+        gap: "26px",
+        boxSizing: "border-box",
       }}
     >
+<<<<<<< HEAD
       {/* ── Main Content ── */}
       <div
         style={{
@@ -288,446 +273,331 @@ export default function ProductDetail({ params }) {
         >
           Thực đơn / Cà phê / {product.name}
         </p>
+=======
+      {/* Breadcrumb */}
+      <p style={{ margin: 0, fontSize: "13px", color: C.textMuted, lineHeight: "20.1px" }}>
+        Thực đơn / Cà phê / {product.name}
+      </p>
 
-        {/* Two-column layout */}
-        <div style={{ display: "flex", gap: "64px", alignItems: "flex-start" }}>
-          {/* ── Left: Product Story ── */}
-          <div
+      {/* Two-column layout */}
+      <div style={{ display: "flex", gap: "64px", alignItems: "flex-start", flexWrap: "wrap" }}>
+        
+        {/* ── Left: Product Story ── */}
+        <div
+          style={{
+            flex: "0 0 580px",
+            maxWidth: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: "22px",
+          }}
+        >
+          {/* Product image */}
+          <img
+            src={product.image}
+            alt={product.name}
             style={{
-              flex: "0 0 580px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "22px",
+              width: "100%",
+              height: "540px",
+              objectFit: "cover",
+              borderRadius: "16px",
+              display: "block",
+            }}
+          />
+
+          {/* Tags */}
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            {product.tags.map((tag) => (
+              <span
+                key={tag.label}
+                style={{
+                  background: tag.color,
+                  borderRadius: "100px",
+                  padding: "5px 12px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: tag.textColor,
+                  lineHeight: "14.5px",
+                }}
+              >
+                {tag.label}
+              </span>
+            ))}
+          </div>
+
+          {/* Tagline */}
+          <p
+            className="font-serif"
+            style={{
+              margin: 0,
+              fontSize: "25px",
+              fontWeight: 500,
+              color: C.text,
+              lineHeight: "32.5px",
             }}
           >
-            {/* Product image */}
-            <img
-              src={product.image}
-              alt={product.name}
-              style={{
-                width: "580px",
-                height: "600px",
-                objectFit: "cover",
-                borderRadius: "16px",
-                display: "block",
-              }}
-            />
+            {product.tagline}
+          </p>
 
-            {/* Tags */}
-            <div style={{ display: "flex", gap: "12px" }}>
-              {product.tags.map((tag) => (
-                <span
-                  key={tag.label}
-                  style={{
-                    background: tag.color,
-                    borderRadius: "100px",
-                    padding: "5px 10px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: tag.textColor,
-                    lineHeight: "14.5px",
-                  }}
-                >
-                  {tag.label}
-                </span>
-              ))}
-            </div>
+          {/* Description */}
+          <p style={{ margin: 0, fontSize: "14px", color: C.textMuted, lineHeight: "21.7px" }}>
+            {product.description}
+          </p>
 
-            {/* Tagline */}
-            <p
+          {/* Allergy note */}
+          <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: "2px" }}>
+              <circle cx="12" cy="12" r="10" stroke={C.textMuted} strokeWidth="1.5"/>
+              <line x1="12" y1="8" x2="12" y2="12" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="12" cy="16" r="0.5" fill={C.textMuted} stroke={C.textMuted} strokeWidth="1"/>
+            </svg>
+            <p style={{ margin: 0, fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}>
+              {product.allergyNote}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Right: Options ── */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: "320px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "20px",
+          }}
+        >
+          {/* Step label */}
+          <p
+            style={{
+              margin: 0,
+              fontSize: "11px",
+              fontWeight: 700,
+              color: C.primary,
+              letterSpacing: "0.05em",
+              lineHeight: "13.3px",
+            }}
+          >
+            {product.step}
+          </p>
+
+          {/* Product name */}
+          <h1
+            className="font-serif"
+            style={{
+              margin: 0,
+              fontSize: "40px",
+              fontWeight: 500,
+              color: C.text,
+              lineHeight: "52px",
+            }}
+          >
+            {product.name}
+          </h1>
+
+          {/* Base price */}
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <span
               style={{
-                margin: 0,
-                fontFamily: "Noto Serif, Georgia, serif",
-                fontSize: "25px",
-                fontWeight: 500,
-                color: C.text,
-                lineHeight: "32.5px",
+                fontSize: "24px",
+                fontWeight: 600,
+                color: C.price,
+                lineHeight: "37.2px",
               }}
             >
-              {product.tagline}
-            </p>
+              {fmt(product.basePrice)}
+            </span>
+            <span style={{ fontSize: "13px", color: C.textMuted, lineHeight: "20.1px" }}>
+              {product.baseSizeLabel}
+            </span>
+          </div>
 
-            {/* Description */}
+          <Divider />
+>>>>>>> origin/main
+
+          {/* Size */}
+          <OptionGroup label="Kích cỡ · Bắt buộc">
+            {product.sizes.map((s) => (
+              <OptionBtn
+                key={s.code}
+                selected={sizeCode === s.code}
+                onClick={() => setSizeCode(s.code)}
+              >
+                {s.label}
+              </OptionBtn>
+            ))}
+          </OptionGroup>
+
+          {/* Sugar */}
+          <OptionGroup label="Mức đường · Bắt buộc">
+            {product.sugarLevels.map((s) => (
+              <OptionBtn
+                key={s.code}
+                selected={sugarCode === s.code}
+                onClick={() => setSugarCode(s.code)}
+              >
+                {s.label}
+              </OptionBtn>
+            ))}
+          </OptionGroup>
+
+          {/* Ice */}
+          <OptionGroup label="Mức đá · Bắt buộc">
+            {product.iceLevels.map((s) => (
+              <OptionBtn
+                key={s.code}
+                selected={iceCode === s.code}
+                onClick={() => setIceCode(s.code)}
+              >
+                {s.label}
+              </OptionBtn>
+            ))}
+          </OptionGroup>
+
+          {/* Toppings */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <p
               style={{
                 margin: 0,
                 fontSize: "14px",
-                color: C.textMuted,
+                fontWeight: 600,
+                color: C.text,
                 lineHeight: "21.7px",
               }}
             >
-              {product.description}
+              Thêm theo gu · Không bắt buộc
             </p>
-
-            {/* Allergy note */}
-            <div
-              style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                style={{ flexShrink: 0, marginTop: "1px" }}
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke={C.textMuted}
-                  strokeWidth="1.5"
-                />
-                <line
-                  x1="12"
-                  y1="8"
-                  x2="12"
-                  y2="12"
-                  stroke={C.textMuted}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-                <circle
-                  cx="12"
-                  cy="16"
-                  r="0.5"
-                  fill={C.textMuted}
-                  stroke={C.textMuted}
-                  strokeWidth="1"
-                />
-              </svg>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "12px",
-                  color: C.textMuted,
-                  lineHeight: "18.6px",
-                }}
-              >
-                {product.allergyNote}
-              </p>
-            </div>
-          </div>
-
-          {/* ── Right: Options ── */}
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              gap: "20px",
-            }}
-          >
-            {/* Step label */}
-            <p
-              style={{
-                margin: 0,
-                fontSize: "11px",
-                fontWeight: 700,
-                color: C.primary,
-                letterSpacing: "0.05em",
-                lineHeight: "13.3px",
-              }}
-            >
-              {product.step}
-            </p>
-
-            {/* Product name */}
-            <h1
-              style={{
-                margin: 0,
-                fontFamily: "Noto Serif, Georgia, serif",
-                fontSize: "40px",
-                fontWeight: 500,
-                color: C.text,
-                lineHeight: "52px",
-              }}
-            >
-              {product.name}
-            </h1>
-
-            {/* Base price */}
-            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-              <span
-                style={{
-                  fontSize: "24px",
-                  fontWeight: 600,
-                  color: C.price,
-                  lineHeight: "37.2px",
-                }}
-              >
-                {fmt(product.basePrice)}
-              </span>
-              <span
-                style={{
-                  fontSize: "13px",
-                  color: C.textMuted,
-                  lineHeight: "20.1px",
-                }}
-              >
-                {product.baseSizeLabel}
-              </span>
-            </div>
-
-            <Divider />
-
-            {/* Size */}
-            <OptionGroup label="Kích cỡ · Bắt buộc">
-              {product.sizes.map((s) => (
-                <OptionBtn
-                  key={s.code}
-                  selected={sizeCode === s.code}
-                  onClick={() => setSizeCode(s.code)}
+            {product.toppings.map((t) => {
+              const checked = selectedToppings.includes(t.id);
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => toggleTopping(t.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "14px",
+                    border: checked
+                      ? `1px solid ${C.primary}`
+                      : `1px solid ${C.border}`,
+                    borderRadius: "8px",
+                    background: checked ? C.primaryLight : C.white,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
                 >
-                  {s.label}
-                </OptionBtn>
-              ))}
-            </OptionGroup>
-
-            {/* Sugar */}
-            <OptionGroup label="Mức đường · Bắt buộc">
-              {product.sugarLevels.map((s) => (
-                <OptionBtn
-                  key={s.code}
-                  selected={sugarCode === s.code}
-                  onClick={() => setSugarCode(s.code)}
-                >
-                  {s.label}
-                </OptionBtn>
-              ))}
-            </OptionGroup>
-
-            {/* Ice */}
-            <OptionGroup label="Mức đá · Bắt buộc">
-              {product.iceLevels.map((s) => (
-                <OptionBtn
-                  key={s.code}
-                  selected={iceCode === s.code}
-                  onClick={() => setIceCode(s.code)}
-                >
-                  {s.label}
-                </OptionBtn>
-              ))}
-            </OptionGroup>
-
-            {/* Toppings */}
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "10px" }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  color: C.text,
-                  lineHeight: "21.7px",
-                }}
-              >
-                Thêm theo gu · Không bắt buộc
-              </p>
-              {product.toppings.map((t) => {
-                const checked = selectedToppings.includes(t.id);
-                return (
                   <div
-                    key={t.id}
-                    onClick={() => toggleTopping(t.id)}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      padding: "14px",
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "4px",
                       border: checked
                         ? `1px solid ${C.primary}`
                         : `1px solid ${C.border}`,
-                      borderRadius: "8px",
-                      background: checked ? C.primaryLight : C.white,
-                      cursor: "pointer",
-                      transition: "all 0.15s",
+                      background: checked ? C.primary : C.white,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
                     }}
                   >
-                    {/* Custom checkbox */}
-                    <div
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "4px",
-                        border: checked
-                          ? `1px solid ${C.primary}`
-                          : `1px solid ${C.border}`,
-                        background: checked ? C.primary : C.white,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {checked && (
-                        <svg
-                          width="10"
-                          height="8"
-                          viewBox="0 0 10 8"
-                          fill="none"
-                        >
-                          <path
-                            d="M1 4l3 3 5-6"
-                            stroke="#fff"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                    <span
-                      style={{
-                        flex: 1,
-                        fontSize: "13px",
-                        color: C.text,
-                        lineHeight: "20.1px",
-                      }}
-                    >
-                      {t.name}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "13px",
-                        color: C.text,
-                        lineHeight: "20.1px",
-                        minWidth: "82px",
-                        textAlign: "right",
-                      }}
-                    >
-                      +{fmt(t.price)}
-                    </span>
+                    {checked && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+                  <span
+                    style={{
+                      flex: 1,
+                      fontSize: "13px",
+                      color: C.text,
+                      lineHeight: "20.1px",
+                    }}
+                  >
+                    {t.name}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      color: C.text,
+                      lineHeight: "20.1px",
+                      minWidth: "82px",
+                      textAlign: "right",
+                    }}
+                  >
+                    +{fmt(t.price)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
 
-            <Divider />
+          <Divider />
 
-            {/* Quantity + price per cup */}
+          {/* Quantity + price per cup */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
+                gap: "22px",
+                border: `1px solid ${C.border}`,
+                borderRadius: "8px",
+                padding: "9px 16px",
+                width: "109px",
+                boxSizing: "border-box",
               }}
             >
-              {/* Quantity control */}
-              <div
+              <button
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
                 style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
                   display: "flex",
                   alignItems: "center",
-                  gap: "22px",
-                  border: `1px solid ${C.border}`,
-                  borderRadius: "8px",
-                  padding: "9px 16px",
-                  width: "109px",
-                  boxSizing: "border-box",
+                  color: C.text,
                 }}
               >
-                <button
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    color: C.text,
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <line
-                      x1="5"
-                      y1="12"
-                      x2="19"
-                      y2="12"
-                      stroke={C.text}
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-                <span
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: C.text,
-                    lineHeight: "21.7px",
-                    minWidth: "9px",
-                    textAlign: "center",
-                  }}
-                >
-                  {qty}
-                </span>
-                <button
-                  onClick={() => setQty((q) => q + 1)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    color: C.text,
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <line
-                      x1="12"
-                      y1="5"
-                      x2="12"
-                      y2="19"
-                      stroke={C.text}
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                    <line
-                      x1="5"
-                      y1="12"
-                      x2="19"
-                      y2="12"
-                      stroke={C.text}
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Price per cup */}
-              <div
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <line x1="5" y1="12" x2="19" y2="12" stroke={C.text} strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+              <span
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "2px",
-                  textAlign: "right",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: C.text,
+                  lineHeight: "21.7px",
+                  minWidth: "9px",
+                  textAlign: "center",
                 }}
               >
-                <span
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 600,
-                    color: C.text,
-                    lineHeight: "27.9px",
-                  }}
-                >
-                  {fmt(pricePerCup)} / ly
-                </span>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    color: C.textMuted,
-                    lineHeight: "17px",
-                  }}
-                >
-                  {breakdown}
-                </span>
-              </div>
+                {qty}
+              </span>
+              <button
+                onClick={() => setQty((q) => q + 1)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  color: C.text,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <line x1="12" y1="5" x2="12" y2="19" stroke={C.text} strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="5" y1="12" x2="19" y2="12" stroke={C.text} strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
             </div>
 
+<<<<<<< HEAD
             {/* Add to cart button */}
             <button
               onClick={() => {
@@ -756,57 +626,32 @@ export default function ProductDetail({ params }) {
               onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
+=======
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "right" }}>
+>>>>>>> origin/main
               <span
                 style={{
-                  fontSize: "15px",
+                  fontSize: "18px",
                   fontWeight: 600,
-                  color: "#ffffff",
-                  lineHeight: "18.2px",
+                  color: C.text,
+                  lineHeight: "27.9px",
                 }}
               >
-                Thêm {qty} ly vào giỏ &nbsp;·&nbsp; {fmt(totalPrice)}
+                {fmt(pricePerCup)} / ly
               </span>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
-                  stroke="#fff"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <line
-                  x1="3"
-                  y1="6"
-                  x2="21"
-                  y2="6"
-                  stroke="#fff"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M16 10a4 4 0 01-8 0"
-                  stroke="#fff"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-
-            {/* Note */}
-            <p
-              style={{
-                margin: 0,
-                fontSize: "12px",
-                color: C.textMuted,
-                lineHeight: "18.6px",
-              }}
-            >
-              Bạn có thể thay đổi tùy chọn trong giỏ hàng trước khi thanh toán.
-            </p>
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: C.textMuted,
+                  lineHeight: "17px",
+                }}
+              >
+                {breakdown}
+              </span>
+            </div>
           </div>
-        </div>
-      </div>
 
+<<<<<<< HEAD
       <footer
         style={{
           height: "75px",
@@ -829,6 +674,11 @@ export default function ProductDetail({ params }) {
           Hỗ trợ &nbsp;•&nbsp; Điều khoản &nbsp;•&nbsp; Quyền riêng tư
         </span>
       </footer>
+=======
+        </div>
+
+      </div>
+>>>>>>> origin/main
     </div>
   );
 }
