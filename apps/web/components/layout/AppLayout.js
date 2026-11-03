@@ -36,8 +36,6 @@ function LayoutInner({ children }) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-<<<<<<< HEAD
-=======
       <TopBanner />
       <Header
         cartCount={displayCartCount}
@@ -46,8 +44,6 @@ function LayoutInner({ children }) {
         onCartClick={handleCartClick}
       />
       <CheckoutStepper />
-
->>>>>>> origin/main
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {children}
       </div>

@@ -5,55 +5,13 @@ import React, { createContext, useContext, useState } from 'react';
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-<<<<<<< HEAD
   const [cartItems, setCartItems] = useState([]);
-=======
-  // Mock cart items based exactly on the Figma / visual designs:
-  // 3 món · 175.000 VNĐ
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Latte yến mạch',
-      size: 'M',
-      options: '50% đường · Ít đá',
-      topping: 'Sữa yến mạch (+10.000 VNĐ)',
-      unitPrice: 65000,
-      price: 65000,
-      quantity: 2,
-      image: '/images/latte-yen-mach.png',
-      note: '50% đường · Ít đá',
-    },
-    {
-      id: 2,
-      name: 'Cold Brew nguyên bản',
-      size: 'M',
-      options: 'Không đường · Đá thường',
-      topping: 'Không topping',
-      unitPrice: 45000,
-      price: 45000,
-      quantity: 1,
-      image: '/images/cold-brew.png',
-      note: 'Không đường · Đá thường',
-    },
-  ]);
->>>>>>> origin/main
 
   const itemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const totalAmount = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
   const formattedTotal = new Intl.NumberFormat('vi-VN').format(totalAmount) + ' VNĐ';
 
-<<<<<<< HEAD
-  const addToCart = (item) => {
-    setCartItems((prev) => {
-      const existing = prev.find((i) => i.id === item.id && i.size === item.size);
-      if (existing) {
-        return prev.map((i) =>
-          i.id === item.id && i.size === item.size ? { ...i, quantity: i.quantity + (item.quantity || 1) } : i
-        );
-      }
-      return [...prev, { ...item, quantity: item.quantity || 1 }];
-=======
   /**
    * Cập nhật số lượng: delta = +1 hoặc -1.
    * Nếu số lượng mới <= 0 → tự động xóa món khỏi giỏ.
@@ -89,24 +47,23 @@ export function CartProvider({ children }) {
       const existing = prev.find(
         (item) => item.id === newItem.id && item.size === newItem.size
       );
+      const qtyToAdd = newItem.quantity || 1;
       if (existing) {
         return prev.map((item) =>
           item.id === newItem.id && item.size === newItem.size
-            ? { ...item, quantity: item.quantity + (newItem.quantity || 1) }
+            ? { ...item, quantity: item.quantity + qtyToAdd }
             : item
         );
       }
-      return [...prev, { quantity: 1, ...newItem }];
->>>>>>> origin/main
+      return [...prev, { ...newItem, quantity: qtyToAdd }];
     });
   };
+
+  const addToCart = addItem;
 
   const clearCart = () => setCartItems([]);
 
   return (
-<<<<<<< HEAD
-    <CartContext.Provider value={{ cartItems, itemCount, totalAmount, formattedTotal, addToCart, clearCart }}>
-=======
     <CartContext.Provider
       value={{
         cartItems,
@@ -116,10 +73,10 @@ export function CartProvider({ children }) {
         updateQuantity,
         removeItem,
         addItem,
+        addToCart,
         clearCart,
       }}
     >
->>>>>>> origin/main
       {children}
     </CartContext.Provider>
   );
@@ -132,4 +89,3 @@ export function useCart() {
   }
   return context;
 }
-

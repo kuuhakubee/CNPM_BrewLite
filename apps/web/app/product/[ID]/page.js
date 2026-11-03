@@ -60,22 +60,22 @@ const MOCK_PRODUCT = {
 
 // ─── Helpers ─────────────────────────────────────────────────
 function fmt(n) {
-  return n.toLocaleString("vi-VN") + " VNĐ";
+  return Number(n || 0).toLocaleString("vi-VN") + " VNĐ";
 }
 
 function fmtShort(n) {
-  return n.toLocaleString("vi-VN");
+  return Number(n || 0).toLocaleString("vi-VN");
 }
 
 function calcPerCup(product, sizeCode, selectedToppings) {
-  const size = product.sizes.find((s) => s.code === sizeCode);
-  const toppingTotal = product.toppings
+  const size = product.sizes?.find((s) => s.code === sizeCode);
+  const toppingTotal = (product.toppings || [])
     .filter((t) => selectedToppings.includes(t.id))
-    .reduce((sum, t) => sum + t.price, 0);
-  return product.basePrice + (size?.priceDelta || 0) + toppingTotal;
+    .reduce((sum, t) => sum + (Number(t.price) || 0), 0);
+  return (Number(product.basePrice) || 0) + (Number(size?.priceDelta) || 0) + toppingTotal;
 }
 
-// ─── Option Button ────────────────────────────────____________
+// ─── Option Button ────────────────────────────────────────────
 function OptionBtn({ selected, onClick, children }) {
   return (
     <button
@@ -135,8 +135,10 @@ function Divider() {
 
 // ─── Main Component ───────────────────────────────────────────
 export default function ProductDetail({ params }) {
-  const { addToCart } = useCart();
-  const { ID: productId } = params;
+  const { addItem, addToCart } = useCart();
+  const addFn = addToCart || addItem;
+
+  const [productId, setProductId] = useState(params?.ID || params?.id || null);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -145,33 +147,55 @@ export default function ProductDetail({ params }) {
   const [sugarCode, setSugarCode] = useState("50");
   const [iceCode, setIceCode] = useState("less");
   const [selectedToppings, setSelectedToppings] = useState([1]);
-  const [qty, setQty] = useState(2);
+  const [qty, setQty] = useState(1);
 
   useEffect(() => {
+    Promise.resolve(params).then((resolved) => {
+      if (resolved) {
+        setProductId(resolved.ID || resolved.id);
+      }
+    });
+  }, [params]);
+
+  useEffect(() => {
+    if (!productId) return;
+
     async function fetchProduct() {
       try {
+        setLoading(true);
         if (USE_MOCK) {
           setProduct(MOCK_PRODUCT);
         } else {
-          const res = await fetch(
-            `http://localhost:4000/api/v1/products/${productId}`,
-          );
-          if (!res.ok) throw new Error("Network error");
-          const data = await res.json();
+          let data = null;
+          try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+            const res = await fetch(`${apiUrl}/api/v1/products/${productId}`);
+            if (res.ok) {
+              data = await res.json();
+            }
+          } catch {
+            // fallback
+          }
+
+          if (!data) {
+            data = MOCK_PRODUCT;
+          }
+
           // Adapter: map real API format to component mock format
           const adapted = {
             ...data,
             id: String(data.id || productId),
             step: "02 / TÙY CHỌN ĐỒ UỐNG",
-            basePrice: Number(data.price) || 0,
+            name: data.name || MOCK_PRODUCT.name,
+            basePrice: Number(data.price) || MOCK_PRODUCT.basePrice,
             baseSizeLabel: `Giá gốc size S · Chưa thêm tùy chọn`,
-            image: data.imageUrl || `https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80`,
+            image: data.imageUrl || data.image || MOCK_PRODUCT.image,
             tags: [
               { label: "Espresso rang vừa", color: C.primaryLight, textColor: C.primary },
               { label: "Có caffeine", color: C.tagBeige, textColor: C.textMuted },
             ],
-            tagline: data.description ? `Đậm một chút, êm thật lâu.` : ``,
-            description: data.description || "",
+            tagline: data.description ? `Đậm một chút, êm thật lâu.` : MOCK_PRODUCT.tagline,
+            description: data.description || MOCK_PRODUCT.description,
             allergyNote: "Có thể chứa sữa và yến mạch. Vui lòng kiểm tra trước khi đặt.",
             sugarLevels: [
               { code: "0", label: "0%" },
@@ -185,20 +209,27 @@ export default function ProductDetail({ params }) {
               { code: "normal", label: "Đá thường" },
             ],
           };
-          if (data.sizes && Array.isArray(data.sizes)) {
+
+          if (data.sizes && Array.isArray(data.sizes) && data.sizes.length > 0) {
             adapted.sizes = data.sizes.map((s) => ({
               code: s.code,
-              label: `${s.code} · +${s.priceDelta ? s.priceDelta.toLocaleString("vi-VN") : 0} VNĐ`,
+              label: `${s.code} · +${s.priceDelta ? Number(s.priceDelta).toLocaleString("vi-VN") : 0} VNĐ`,
               priceDelta: s.priceDelta ? Number(s.priceDelta) : 0,
             }));
+          } else {
+            adapted.sizes = MOCK_PRODUCT.sizes;
           }
-          if (data.toppings && Array.isArray(data.toppings)) {
+
+          if (data.toppings && Array.isArray(data.toppings) && data.toppings.length > 0) {
             adapted.toppings = data.toppings.map((t) => ({
               id: t.id,
               name: t.name,
               price: t.price ? Number(t.price) : 0,
             }));
+          } else {
+            adapted.toppings = MOCK_PRODUCT.toppings;
           }
+
           setProduct(adapted);
           setSizeCode(adapted.sizes?.[0]?.code ?? "S");
           setSugarCode("50");
@@ -229,14 +260,36 @@ export default function ProductDetail({ params }) {
   const pricePerCup = calcPerCup(product, sizeCode, selectedToppings);
   const totalPrice = pricePerCup * qty;
 
-  const selectedSize = product.sizes.find((s) => s.code === sizeCode);
+  const selectedSize = product.sizes?.find((s) => s.code === sizeCode);
   const breakdownParts = [fmtShort(product.basePrice)];
   if (selectedSize?.priceDelta > 0)
     breakdownParts.push(fmtShort(selectedSize.priceDelta));
-  product.toppings
+  (product.toppings || [])
     .filter((t) => selectedToppings.includes(t.id))
     .forEach((t) => breakdownParts.push(fmtShort(t.price)));
   const breakdown = breakdownParts.join(" + ") + " VNĐ";
+
+  const handleAddToCart = () => {
+    const selectedToppingObjs = (product.toppings || []).filter((t) => selectedToppings.includes(t.id));
+    const toppingNames = selectedToppingObjs.map((t) => t.name).join(', ') || 'Không topping';
+    const iceLabel = iceCode === 'none' ? 'Không đá' : iceCode === 'less' ? 'Ít đá' : 'Đá thường';
+
+    if (addFn) {
+      addFn({
+        id: product.id,
+        name: product.name,
+        size: sizeCode,
+        quantity: qty,
+        price: pricePerCup,
+        unitPrice: pricePerCup,
+        image: product.image,
+        options: `${sugarCode}% đường · ${iceLabel}`,
+        note: `${sugarCode}% đường · ${iceLabel}`,
+        topping: toppingNames,
+      });
+    }
+    alert(`Đã thêm ${qty} ly ${product.name} (${sizeCode}) vào giỏ hàng!`);
+  };
 
   return (
     <div
@@ -251,32 +304,9 @@ export default function ProductDetail({ params }) {
         boxSizing: "border-box",
       }}
     >
-<<<<<<< HEAD
-      {/* ── Main Content ── */}
-      <div
-        style={{
-          flex: 1,
-          padding: "30px 64px 48px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "26px",
-        }}
-      >
-        {/* Breadcrumb */}
-        <p
-          style={{
-            margin: 0,
-            fontSize: "13px",
-            color: C.textMuted,
-            lineHeight: "20.1px",
-          }}
-        >
-          Thực đơn / Cà phê / {product.name}
-        </p>
-=======
       {/* Breadcrumb */}
       <p style={{ margin: 0, fontSize: "13px", color: C.textMuted, lineHeight: "20.1px" }}>
-        Thực đơn / Cà phê / {product.name}
+        Thực đơn / {product.category || "Đồ uống"} / {product.name}
       </p>
 
       {/* Two-column layout */}
@@ -307,7 +337,7 @@ export default function ProductDetail({ params }) {
 
           {/* Tags */}
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            {product.tags.map((tag) => (
+            {(product.tags || []).map((tag) => (
               <span
                 key={tag.label}
                 style={{
@@ -413,11 +443,10 @@ export default function ProductDetail({ params }) {
           </div>
 
           <Divider />
->>>>>>> origin/main
 
           {/* Size */}
           <OptionGroup label="Kích cỡ · Bắt buộc">
-            {product.sizes.map((s) => (
+            {(product.sizes || []).map((s) => (
               <OptionBtn
                 key={s.code}
                 selected={sizeCode === s.code}
@@ -430,7 +459,7 @@ export default function ProductDetail({ params }) {
 
           {/* Sugar */}
           <OptionGroup label="Mức đường · Bắt buộc">
-            {product.sugarLevels.map((s) => (
+            {(product.sugarLevels || []).map((s) => (
               <OptionBtn
                 key={s.code}
                 selected={sugarCode === s.code}
@@ -443,7 +472,7 @@ export default function ProductDetail({ params }) {
 
           {/* Ice */}
           <OptionGroup label="Mức đá · Bắt buộc">
-            {product.iceLevels.map((s) => (
+            {(product.iceLevels || []).map((s) => (
               <OptionBtn
                 key={s.code}
                 selected={iceCode === s.code}
@@ -467,7 +496,7 @@ export default function ProductDetail({ params }) {
             >
               Thêm theo gu · Không bắt buộc
             </p>
-            {product.toppings.map((t) => {
+            {(product.toppings || []).map((t) => {
               const checked = selectedToppings.includes(t.id);
               return (
                 <div
@@ -537,7 +566,19 @@ export default function ProductDetail({ params }) {
           <Divider />
 
           {/* Quantity + price per cup */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div
+            style={{
+              marginTop: "10px",
+              padding: "16px 20px",
+              background: C.white,
+              border: `1px solid ${C.border}`,
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "16px",
+            }}
+          >
             <div
               style={{
                 display: "flex",
@@ -597,38 +638,7 @@ export default function ProductDetail({ params }) {
               </button>
             </div>
 
-<<<<<<< HEAD
-            {/* Add to cart button */}
-            <button
-              onClick={() => {
-                const { addToCart } = useCart();
-                addToCart({
-                  id: product.id,
-                  name: product.name,
-                  size: sizeCode,
-                  price: calcPerCup(product, sizeCode, selectedToppings),
-                });
-                alert(`Đã thêm ${qty} ly ${product.name} (${sizeCode}) vào giỏ hàng!`);
-              }}
-              style={{
-                width: "100%",
-                height: "50px",
-                background: C.primary,
-                border: `1px solid ${C.primary}`,
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "12px",
-                cursor: "pointer",
-                transition: "opacity 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-            >
-=======
             <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "right" }}>
->>>>>>> origin/main
               <span
                 style={{
                   fontSize: "18px",
@@ -651,34 +661,33 @@ export default function ProductDetail({ params }) {
             </div>
           </div>
 
-<<<<<<< HEAD
-      <footer
-        style={{
-          height: "75px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 64px",
-          borderTop: `1px solid ${C.border}`,
-          background: C.bg,
-        }}
-      >
-        <span
-          style={{ fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}
-        >
-          BrewLite / Một chút chậm, một ngày thật ngon.
-        </span>
-        <span
-          style={{ fontSize: "12px", color: C.textMuted, lineHeight: "18.6px" }}
-        >
-          Hỗ trợ &nbsp;•&nbsp; Điều khoản &nbsp;•&nbsp; Quyền riêng tư
-        </span>
-      </footer>
-=======
+          {/* Add to cart button */}
+          <button
+            onClick={handleAddToCart}
+            style={{
+              width: "100%",
+              height: "50px",
+              background: C.primary,
+              color: "#ffffff",
+              border: `1px solid ${C.primary}`,
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "12px",
+              fontSize: "15px",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "opacity 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+          >
+            <span>Thêm vào giỏ hàng · {fmt(totalPrice)}</span>
+          </button>
         </div>
 
       </div>
->>>>>>> origin/main
     </div>
   );
 }
