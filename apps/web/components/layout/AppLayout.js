@@ -24,11 +24,6 @@ function LayoutInner({ children }) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header
-        cartCount={itemCount}
-        authButtonText={user ? user.name : 'Đăng nhập'}
-        onAuthClick={handleAuthClick}
-      />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {children}
       </div>

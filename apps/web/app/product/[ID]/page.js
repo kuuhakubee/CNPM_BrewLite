@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCart } from "../../../context/CartContext";
 
 const USE_MOCK = false;
 
@@ -136,6 +137,7 @@ function Divider() {
 
 // ─── Main Component ───────────────────────────────────────────
 export default function ProductDetail({ params }) {
+  const { addToCart } = useCart();
   const { ID: productId } = params;
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -265,181 +267,6 @@ export default function ProductDetail({ params }) {
         flexDirection: "column",
       }}
     >
-      {/* ── Top Banner ── */}
-      <div
-        style={{
-          background: C.banner,
-          color: "#ffffff",
-          textAlign: "center",
-          height: "30px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "11px",
-          fontWeight: 400,
-          letterSpacing: "0.01em",
-        }}
-      >
-        BẢN THIẾT KẾ MVP &nbsp;•&nbsp; Nhận tại quầy &nbsp;•&nbsp; Thanh toán
-        mẫu, không phát sinh giao dịch
-      </div>
-
-      {/* ── Navbar ── */}
-      <nav
-        style={{
-          height: "96px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 64px",
-          background: C.bg,
-          borderBottom: `1px solid ${C.border}`,
-        }}
-      >
-        {/* Brand */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            width: "170px",
-          }}
-        >
-          <svg width="29" height="29" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M3 9h18M3 9c0-2 1.5-6 9-6s9 4 9 6M3 9v9a2 2 0 002 2h14a2 2 0 002-2V9"
-              stroke={C.primary}
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M8 15c0 1.1.9 2 2 2h4a2 2 0 000-4h-4a2 2 0 00-2 2z"
-              stroke={C.primary}
-              strokeWidth="1.5"
-            />
-          </svg>
-          <span
-            style={{
-              fontFamily: "Noto Serif, Georgia, serif",
-              fontSize: "29px",
-              fontWeight: 600,
-              color: C.text,
-              lineHeight: "39.5px",
-            }}
-          >
-            BrewLite
-          </span>
-        </div>
-
-        {/* Nav links */}
-        <div style={{ display: "flex", gap: "32px", alignItems: "center" }}>
-          {[
-            { label: "Thực đơn", active: true },
-            { label: "Cửa hàng", active: false },
-            { label: "Lịch sử đơn", active: false },
-          ].map((item) => (
-            <div
-              key={item.label}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                cursor: "pointer",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "14px",
-                  fontWeight: item.active ? 600 : 400,
-                  color: item.active ? C.primary : C.textMuted,
-                  lineHeight: "16.9px",
-                }}
-              >
-                {item.label}
-              </span>
-              {item.active && (
-                <div
-                  style={{
-                    height: "2px",
-                    background: C.primary,
-                    borderRadius: "1px",
-                  }}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Account + Cart */}
-        <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              cursor: "pointer",
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="8" r="4" stroke={C.text} strokeWidth="1.5" />
-              <path
-                d="M4 20c0-4 3.6-7 8-7s8 3 8 7"
-                stroke={C.text}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span style={{ fontSize: "14px", color: C.text }}>Đăng nhập</span>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              background: C.primaryLight,
-              borderRadius: "8px",
-              padding: "12px 16px",
-              cursor: "pointer",
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
-                stroke={C.primary}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <line
-                x1="3"
-                y1="6"
-                x2="21"
-                y2="6"
-                stroke={C.primary}
-                strokeWidth="1.5"
-              />
-              <path
-                d="M16 10a4 4 0 01-8 0"
-                stroke={C.primary}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span
-              style={{
-                fontSize: "14px",
-                fontWeight: 600,
-                color: C.primary,
-                lineHeight: "21.7px",
-              }}
-            >
-              Giỏ hàng · 1
-            </span>
-          </div>
-        </div>
-      </nav>
-
       {/* ── Main Content ── */}
       <div
         style={{
@@ -903,9 +730,16 @@ export default function ProductDetail({ params }) {
 
             {/* Add to cart button */}
             <button
-              onClick={() =>
-                alert(`Đã thêm ${qty} ly ${product.name} vào giỏ hàng!`)
-              }
+              onClick={() => {
+                const { addToCart } = useCart();
+                addToCart({
+                  id: product.id,
+                  name: product.name,
+                  size: sizeCode,
+                  price: calcPerCup(product, sizeCode, selectedToppings),
+                });
+                alert(`Đã thêm ${qty} ly ${product.name} (${sizeCode}) vào giỏ hàng!`);
+              }}
               style={{
                 width: "100%",
                 height: "50px",
@@ -973,7 +807,6 @@ export default function ProductDetail({ params }) {
         </div>
       </div>
 
-      {/* ── Footer ── */}
       <footer
         style={{
           height: "75px",
