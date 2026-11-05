@@ -99,16 +99,20 @@ export default function HomePage() {
       setLoading(true);
       setError(null);
       try {
-        if (USE_MOCK) {
-          await new Promise((resolve) => setTimeout(resolve, 200));
-          setProducts(MOCK_PRODUCTS);
-        } else {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-          const res = await fetch(`${apiUrl}/products`);
-          if (!res.ok) throw new Error("Không thể tải danh sách sản phẩm");
-          const data = await res.json();
-          setProducts(data);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        try {
+          const res = await fetch(`${apiUrl}/api/v1/products`);
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+              setProducts(data);
+              return;
+            }
+          }
+        } catch {
+          // fallback to mock if API is offline
         }
+        setProducts(MOCK_PRODUCTS);
       } catch (err) {
         setError(err.message || "Lỗi tải thực đơn");
       } finally {
@@ -119,11 +123,19 @@ export default function HomePage() {
     fetchProducts();
   }, []);
 
+  const categoryMatch = (productCategory, catId) => {
+    if (catId === "all") return true;
+    if (productCategory === catId) return true;
+    if (catId === "Cà phê" && productCategory === "coffee") return true;
+    if (catId === "Trà & Matcha" && productCategory === "tea") return true;
+    if (catId === "Đồ uống trái cây" && (productCategory === "juice" || productCategory === "smoothie")) return true;
+    return false;
+  };
+
   // ─── Lọc theo danh mục và từ khóa tìm kiếm ───────────────────
   const filteredProducts = useMemo(() => {
     return products.filter((item) => {
-      const matchCat =
-        selectedCategory === "all" || item.category === selectedCategory;
+      const matchCat = categoryMatch(item.category, selectedCategory);
       const matchSearch =
         item.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
         (item.description &&
@@ -134,10 +146,12 @@ export default function HomePage() {
 
   // Đếm số lượng món theo từng danh mục
   const countByCategory = useMemo(() => {
-    const counts = { all: products.length };
-    products.forEach((p) => {
-      counts[p.category] = (counts[p.category] || 0) + 1;
-    });
+    const counts = {
+      all: products.length,
+      "Cà phê": products.filter((p) => categoryMatch(p.category, "Cà phê")).length,
+      "Trà & Matcha": products.filter((p) => categoryMatch(p.category, "Trà & Matcha")).length,
+      "Đồ uống trái cây": products.filter((p) => categoryMatch(p.category, "Đồ uống trái cây")).length,
+    };
     return counts;
   }, [products]);
 
@@ -762,7 +776,7 @@ export default function HomePage() {
                       }}
                     >
                       <img
-                        src={p.image}
+                        src={p.image || p.imageUrl || "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80"}
                         alt={p.name}
                         style={{
                           width: "100%",
@@ -843,7 +857,7 @@ export default function HomePage() {
                             color: C.primary,
                           }}
                         >
-                          {fmt(p.price)}
+                          {fmt(Number(p.price) || 0)}
                         </span>
 
                         <Link

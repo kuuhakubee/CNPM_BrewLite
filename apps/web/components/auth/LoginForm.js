@@ -76,6 +76,7 @@ export default function LoginForm({ onSwitchToRegister, onSuccess }) {
         onSuccess();
       } else {
         alert(`Đăng nhập thành công! Chào mừng trở lại, ${email}.`);
+        window.location.href = '/';
       }
     } catch (err) {
       setGeneralError(err.message || 'Đăng nhập không thành công. Vui lòng thử lại.');

@@ -5,34 +5,7 @@ import React, { createContext, useContext, useState } from 'react';
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  // Mock cart items based exactly on the Figma / visual designs:
-  // 3 món · 175.000 VNĐ
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Latte yến mạch',
-      size: 'M',
-      options: '50% đường · Ít đá',
-      topping: 'Sữa yến mạch (+10.000 VNĐ)',
-      unitPrice: 65000,
-      price: 65000,
-      quantity: 2,
-      image: '/images/latte-yen-mach.png',
-      note: '50% đường · Ít đá',
-    },
-    {
-      id: 2,
-      name: 'Cold Brew nguyên bản',
-      size: 'M',
-      options: 'Không đường · Đá thường',
-      topping: 'Không topping',
-      unitPrice: 45000,
-      price: 45000,
-      quantity: 1,
-      image: '/images/cold-brew.png',
-      note: 'Không đường · Đá thường',
-    },
-  ]);
+  const [cartItems, setCartItems] = useState([]);
 
   const itemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const totalAmount = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -74,16 +47,19 @@ export function CartProvider({ children }) {
       const existing = prev.find(
         (item) => item.id === newItem.id && item.size === newItem.size
       );
+      const qtyToAdd = newItem.quantity || 1;
       if (existing) {
         return prev.map((item) =>
           item.id === newItem.id && item.size === newItem.size
-            ? { ...item, quantity: item.quantity + (newItem.quantity || 1) }
+            ? { ...item, quantity: item.quantity + qtyToAdd }
             : item
         );
       }
-      return [...prev, { quantity: 1, ...newItem }];
+      return [...prev, { ...newItem, quantity: qtyToAdd }];
     });
   };
+
+  const addToCart = addItem;
 
   const clearCart = () => setCartItems([]);
 
@@ -97,6 +73,7 @@ export function CartProvider({ children }) {
         updateQuantity,
         removeItem,
         addItem,
+        addToCart,
         clearCart,
       }}
     >
@@ -112,4 +89,3 @@ export function useCart() {
   }
   return context;
 }
-

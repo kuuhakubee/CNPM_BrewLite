@@ -59,7 +59,7 @@ export class OrdersController {
    * Lấy danh sách đơn hàng của khách hàng hiện tại.
    */
   @UseGuards(JwtAuthGuard)
-  @Get()
+  @Get('me')
   async getMyOrders(@Request() req: any) {
     return this.ordersService.getMyOrders(req.user.id);
   }
