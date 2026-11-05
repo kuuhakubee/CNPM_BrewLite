@@ -1,5 +1,8 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import styles from './Layout.module.css';
 
 export default function Header({
@@ -8,6 +11,11 @@ export default function Header({
   onAuthClick,
   onCartClick,
 }) {
+  const pathname = usePathname();
+
+  const isMenu = pathname === '/' || pathname?.startsWith('/product');
+  const isHistory = pathname === '/history';
+
   return (
     <header className={styles.header}>
       <div className={styles.headerContainer}>
@@ -23,9 +31,22 @@ export default function Header({
         </Link>
 
         <nav className={styles.navLinks}>
-          <Link href="/" className={styles.navLink}>Thực đơn</Link>
-          <Link href="/#stores" className={styles.navLink}>Cửa hàng</Link>
-          <Link href="/#history" className={styles.navLink}>Lịch sử đơn</Link>
+          {/* Thực đơn — ẩn vì trùng với trang chủ (/) */}
+          {/* <Link
+            href="/"
+            className={`${styles.navLink} ${isMenu && !isHistory ? styles.navLinkActive : ''}`}
+          >
+            Thực đơn
+          </Link> */}
+          <Link href="/#stores" className={styles.navLink}>
+            Cửa hàng
+          </Link>
+          <Link
+            href="/history"
+            className={`${styles.navLink} ${isHistory ? styles.navLinkActive : ''}`}
+          >
+            Lịch sử đơn
+          </Link>
         </nav>
 
         <div className={styles.headerRight}>

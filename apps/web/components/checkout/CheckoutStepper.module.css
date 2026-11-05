@@ -28,6 +28,15 @@
   opacity: 0.85;
 }
 
+.stepItemLocked {
+  cursor: not-allowed !important;
+  opacity: 0.65;
+}
+
+.stepItemLocked:hover {
+  opacity: 0.65;
+}
+
 .stepCircle {
   width: 24px;
   height: 24px;

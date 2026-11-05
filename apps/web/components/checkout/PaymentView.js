@@ -7,12 +7,15 @@ import styles from './PaymentView.module.css';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCheckout } from '../../context/CheckoutContext';
+import { orderService } from '../../services/orderService';
+import { paymentService } from '../../services/paymentService';
 
 export default function PaymentView() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { cartItems, itemCount, totalAmount } = useCart();
-  const { markPaymentComplete, isCartCompleted, isAccountCompleted } = useCheckout();
+  const { user, token } = useAuth();
+  const { cartItems, itemCount, totalAmount, clearCart } = useCart();
+  const { markPaymentComplete, isCartCompleted, isAccountCompleted } =
+    useCheckout();
 
   useEffect(() => {
     if (!isCartCompleted) {
@@ -31,57 +34,165 @@ export default function PaymentView() {
   const [fullName, setFullName] = useState(user?.name || user?.fullName || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [email, setEmail] = useState(user?.email || '');
+
+  useEffect(() => {
+    if (user) {
+      if (!fullName) setFullName(user.name || user.fullName || '');
+      if (!phone && user.phone) setPhone(user.phone);
+      if (!email && user.email) setEmail(user.email);
+    }
+  }, [user]);
+
   const [store, setStore] = useState('BrewLite Nguyễn Huệ · Quận 1');
   const [note, setNote] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('momo'); // 'momo' | 'card'
+  /**
+   * paymentMethod: 'VNPAY' (Cổng thanh toán VNPay Sandbox) | 'WALLET' (Ví điện tử MoMo Sandbox)
+   */
+  const [paymentMethod, setPaymentMethod] = useState('VNPAY');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showFailedNotice, setShowFailedNotice] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const formatPrice = (val) => new Intl.NumberFormat('vi-VN').format(val) + ' VNĐ';
+  const formatPrice = (val) =>
+    new Intl.NumberFormat('vi-VN').format(val) + ' VNĐ';
 
-  const handlePay = () => {
+  const handlePay = async () => {
     // Validation cơ bản
-    if (!fullName.trim()) { alert('Vui lòng nhập họ và tên.'); return; }
-    if (!phone.trim()) { alert('Vui lòng nhập số điện thoại.'); return; }
-    if (!email.trim()) { alert('Vui lòng nhập địa chỉ email.'); return; }
+    if (!fullName.trim()) {
+      alert('Vui lòng nhập họ và tên.');
+      return;
+    }
+    if (!phone.trim()) {
+      alert('Vui lòng nhập số điện thoại.');
+      return;
+    }
+    if (!email.trim()) {
+      alert('Vui lòng nhập địa chỉ email.');
+      return;
+    }
 
     setIsSubmitting(true);
-    markPaymentComplete();
+    setShowFailedNotice(false);
+    setErrorMessage('');
 
-    // Save order data for confirmation view
-    if (typeof window !== 'undefined') {
+    try {
+      const activeToken = token;
+      let orderId = null;
+      let orderCode = null;
+
+      // ── Bước 1: Tạo đơn hàng PENDING ──────────────────────────────────────
+      try {
+        if (activeToken && !activeToken.startsWith('mock-jwt-token-')) {
+          const orderResult = await orderService.createOrder(
+            {
+              subtotal: totalAmount,
+              total: totalAmount,
+              discount: 0,
+            },
+            activeToken,
+          );
+          if (orderResult?.order?.id) {
+            orderId = orderResult.order.id;
+            orderCode = orderResult.order.code || `#${orderId}`;
+          }
+        }
+      } catch (orderErr) {
+        console.warn('Backend createOrder không khả dụng hoặc token hết hạn:', orderErr?.message);
+      }
+
+      // Nếu backend đang bảo trì hoặc chạy phiên mock, sinh orderId và orderCode dự phòng
+      if (!orderId) {
+        orderId = Math.floor(1000 + Math.random() * 9000);
+        orderCode = `#BL-${orderId}`;
+      }
+
       const now = new Date();
       const pad = (n) => String(n).padStart(2, '0');
       const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} · ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      const orderCode = '#BL-' + Math.floor(1000 + Math.random() * 9000);
 
       const orderInfo = {
         code: orderCode,
+        orderId,
         total: formatPrice(totalAmount),
         itemCount,
         items: cartItems,
-        method: paymentMethod === 'momo' ? 'Ví MoMo · Sandbox' : 'Thẻ ngân hàng',
+        method:
+          paymentMethod === 'VNPAY'
+            ? 'Cổng VNPay Sandbox'
+            : 'Ví điện tử · MoMo Sandbox',
         date: dateStr,
         customerName: fullName,
         customerPhone: phone,
+        orderStatus: 'PENDING',
       };
       sessionStorage.setItem('brewlite_last_order', JSON.stringify(orderInfo));
-    }
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+      // ── Bước 2: Gọi Cổng thanh toán VNPay Sandbox ─────────────────────────
+      if (paymentMethod === 'VNPAY') {
+        const vnpayRes = await paymentService.createVnpayUrl(
+          orderId,
+          activeToken,
+          '',
+          totalAmount,
+        );
+
+        if (!vnpayRes?.paymentUrl) {
+          throw new Error('Cổng VNPay không trả về liên kết thanh toán.');
+        }
+
+        // Xóa giỏ hàng trước khi chuyển sang VNPay
+        clearCart();
+
+        // ── Bước 3: Chuyển hướng người dùng sang Cổng VNPay Sandbox ─────────
+        window.location.href = vnpayRes.paymentUrl;
+        return;
+      }
+
+      // Phương thức Mock dự phòng (nếu chọn Ví MoMo)
+      const idempotencyKey = paymentService.getOrCreateIdempotencyKey();
+      const payResult = await paymentService.pay(
+        {
+          orderId,
+          amount: totalAmount,
+          method: 'WALLET',
+          idempotencyKey,
+        },
+        activeToken,
+      );
+
+      if (payResult.orderStatus === 'PAYMENT_FAILED') {
+        paymentService.resetPaymentKey();
+        setShowFailedNotice(true);
+        setErrorMessage(
+          'Giao dịch bị từ chối bởi cổng thanh toán. Giỏ hàng được giữ nguyên. Bạn có thể thử lại.',
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      paymentService.resetPaymentKey();
+      markPaymentComplete();
+      orderInfo.orderStatus = 'PAID';
+      orderInfo.transactionRef = payResult.payment?.transactionRef;
+      sessionStorage.setItem('brewlite_last_order', JSON.stringify(orderInfo));
+      clearCart();
       router.push('/checkout/confirmation');
-    }, 400);
+    } catch (err) {
+      setShowFailedNotice(true);
+      setErrorMessage(
+        err?.message || 'Đã xảy ra lỗi kết nối thanh toán. Vui lòng thử lại.',
+      );
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className={styles.container}>
       {/* Page Header */}
       <div className={styles.headerTitleGroup}>
-        <div className={styles.sectionBadge}>06 / THANH TOÁN</div>
         <h1 className={styles.pageTitle}>Sắp đến giờ cà phê.</h1>
         <p className={styles.pageSubtitle}>
-          Nhận tại quầy, thanh toán không tiền mặt. Kiểm tra thông tin lần cuối nhé.
+          Nhận tại quầy, thanh toán trực tuyến qua Cổng VNPay Sandbox. Kiểm tra thông tin trước khi chuyển nhé.
         </p>
       </div>
 
@@ -117,53 +228,47 @@ export default function PaymentView() {
                   className={styles.input}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Nhập số điện thoại"
+                  placeholder="0901 234 567"
                 />
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Email nhận thông tin đơn *</label>
+              <label className={styles.label}>Email nhận thông báo đơn *</label>
               <input
                 type="email"
                 className={styles.input}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Nhập địa chỉ email"
+                placeholder="tenban@domain.com"
               />
             </div>
           </div>
 
-          {/* Card 2: Pickup Store */}
+          {/* Card 2: Pickup details */}
           <div className={styles.sectionCard}>
-            <div className={styles.storeHeaderRow}>
-              <div className={styles.cardHeaderTitle}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
-                <span>Nhận tại cửa hàng</span>
-              </div>
-              <span className={styles.mvpBadge}>MVP · Chỉ nhận tại quầy</span>
+            <div className={styles.cardHeaderTitle}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+              <span>Điểm nhận tại quầy</span>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Chọn cửa hàng *</label>
+              <label className={styles.label}>Chọn cửa hàng</label>
               <div className={styles.selectWrapper}>
                 <select
                   className={styles.select}
                   value={store}
                   onChange={(e) => setStore(e.target.value)}
                 >
-                  <option value="BrewLite Nguyễn Huệ · Quận 1">
-                    BrewLite Nguyễn Huệ · Quận 1
-                  </option>
-                  <option value="BrewLite Thảo Điền · TP.Thủ Đức">
-                    BrewLite Thảo Điền · TP.Thủ Đức
-                  </option>
+                  <option>BrewLite Nguyễn Huệ · Quận 1</option>
+                  <option>BrewLite Hồ Con Rùa · Quận 3</option>
+                  <option>BrewLite Thảo Điền · Thủ Đức</option>
                 </select>
-                <div className={styles.selectArrow}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div className={styles.selectChevron}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
@@ -179,7 +284,7 @@ export default function PaymentView() {
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <span>Dự kiến sau 15–20 phút kể từ khi thanh toán được xác minh.</span>
+              <span>Dự kiến sau 15–20 phút kể từ khi thanh toán được xác minh qua Webhook.</span>
             </div>
 
             <div className={styles.formGroup} style={{ marginTop: '16px' }}>
@@ -194,44 +299,21 @@ export default function PaymentView() {
             </div>
           </div>
 
-          {/* Card 3: Cashless Payment Methods */}
+          {/* Card 3: Payment Methods */}
           <div className={styles.sectionCard}>
             <div className={styles.cardHeaderTitle}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="5" width="20" height="14" rx="2" />
                 <line x1="2" y1="10" x2="22" y2="10" />
               </svg>
-              <span>Thanh toán không tiền mặt</span>
+              <span>Cổng thanh toán môi trường thử nghiệm</span>
             </div>
 
             <div className={styles.paymentMethodsGrid}>
-              {/* Option 1: E-Wallet (MoMo) */}
+              {/* Option 1: VNPay Sandbox (Recommended) */}
               <div
-                className={`${styles.paymentRadioCard} ${paymentMethod === 'momo' ? styles.paymentCardActive : ''}`}
-                onClick={() => setPaymentMethod('momo')}
-              >
-                <div className={styles.methodLeft}>
-                  <div className={styles.methodIconBox}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                      <line x1="12" y1="18" x2="12.01" y2="18" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className={styles.methodName}>Ví điện tử</div>
-                    <div className={styles.methodDesc}>MoMo · Môi trường thử nghiệm</div>
-                  </div>
-                </div>
-
-                <div className={`${styles.radioIndicator} ${paymentMethod === 'momo' ? styles.radioIndicatorActive : ''}`}>
-                  {paymentMethod === 'momo' && <div className={styles.radioDot} />}
-                </div>
-              </div>
-
-              {/* Option 2: Bank Card */}
-              <div
-                className={`${styles.paymentRadioCard} ${paymentMethod === 'card' ? styles.paymentCardActive : ''}`}
-                onClick={() => setPaymentMethod('card')}
+                className={`${styles.paymentRadioCard} ${paymentMethod === 'VNPAY' ? styles.paymentCardActive : ''}`}
+                onClick={() => setPaymentMethod('VNPAY')}
               >
                 <div className={styles.methodLeft}>
                   <div className={styles.methodIconBox}>
@@ -241,19 +323,52 @@ export default function PaymentView() {
                     </svg>
                   </div>
                   <div>
-                    <div className={styles.methodName}>Thẻ ngân hàng</div>
-                    <div className={styles.methodDesc}>Qua trang bảo mật của đối tác</div>
+                    <div className={styles.methodName}>
+                      Cổng VNPay Sandbox ⭐
+                    </div>
+                    <div className={styles.methodDesc}>
+                      Thẻ test NCB · Quét mã QR VietQR · OTP 123456
+                    </div>
                   </div>
                 </div>
 
-                <div className={`${styles.radioIndicator} ${paymentMethod === 'card' ? styles.radioIndicatorActive : ''}`}>
-                  {paymentMethod === 'card' && <div className={styles.radioDot} />}
+                <div className={`${styles.radioIndicator} ${paymentMethod === 'VNPAY' ? styles.radioIndicatorActive : ''}`}>
+                  {paymentMethod === 'VNPAY' && <div className={styles.radioDot} />}
+                </div>
+              </div>
+
+              {/* Option 2: MoMo Sandbox */}
+              <div
+                className={`${styles.paymentRadioCard} ${paymentMethod === 'WALLET' ? styles.paymentCardActive : ''}`}
+                onClick={() => setPaymentMethod('WALLET')}
+              >
+                <div className={styles.methodLeft}>
+                  <div className={styles.methodIconBox}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                      <line x1="12" y1="18" x2="12.01" y2="18" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className={styles.methodName}>Ví điện tử MoMo Sandbox</div>
+                    <div className={styles.methodDesc}>Môi trường thử nghiệm</div>
+                  </div>
+                </div>
+
+                <div className={`${styles.radioIndicator} ${paymentMethod === 'WALLET' ? styles.radioIndicatorActive : ''}`}>
+                  {paymentMethod === 'WALLET' && <div className={styles.radioDot} />}
                 </div>
               </div>
             </div>
 
-            <div className={styles.paymentFootnote}>
-              Bản mẫu dùng sandbox của nhà cung cấp. BrewLite không lưu số thẻ hay CVV.
+            <div className={styles.paymentFootnote} style={{ marginTop: '14px', lineHeight: '1.5' }}>
+              💡 <strong>Thông tin thẻ test VNPay Sandbox</strong>:
+              <br />
+              • Ngân hàng: <strong>NCB</strong> | Số thẻ: <code>9704198526191432198</code>
+              <br />
+              • Tên chủ thẻ: <code>NGUYEN VAN A</code> | Ngày phát hành: <code>07/15</code>
+              <br />
+              • Mật khẩu OTP: <code>123456</code> (Tuyệt đối không dùng thẻ/tiền thật)
             </div>
           </div>
         </div>
@@ -309,7 +424,7 @@ export default function PaymentView() {
           </div>
 
           <div className={styles.feeRow}>
-            <span>Phí thanh toán</span>
+            <span>Phí giao dịch Sandbox</span>
             <span>0 VNĐ</span>
           </div>
 
@@ -321,10 +436,10 @@ export default function PaymentView() {
           </div>
 
           <div className={styles.vatNote}>
-            Giá đã gồm VAT. Không có phí giao hàng.
+            Giá đã gồm VAT. Đơn hàng chuyển sang PENDING trước khi gọi VNPay.
           </div>
 
-          {/* Mock failed notice box matching image */}
+          {/* Payment failed notice */}
           {showFailedNotice && (
             <div className={styles.retryAlertBox}>
               <div className={styles.retryIconWrapper}>
@@ -335,7 +450,8 @@ export default function PaymentView() {
                 </svg>
               </div>
               <div className={styles.retryText}>
-                Trạng thái mẫu: lần thử trước thất bại. Giỏ hàng được giữ nguyên. Thử lại không tạo thêm đơn; nếu đã bị trừ tiền, hãy kiểm tra trạng thái trước khi thử lại.
+                {errorMessage ||
+                  'Thanh toán thất bại. Đơn hàng chuyển sang trạng thái PAYMENT_FAILED. Giỏ hàng được giữ nguyên — bạn có thể thử lại.'}
               </div>
             </div>
           )}
@@ -349,8 +465,10 @@ export default function PaymentView() {
           >
             <span>
               {isSubmitting
-                ? 'Đang kết nối sandbox...'
-                : `Xác nhận thanh toán · ${formatPrice(totalAmount)}`}
+                ? 'Đang kết nối cổng VNPay...'
+                : paymentMethod === 'VNPAY'
+                  ? `Thanh toán qua VNPay Sandbox · ${formatPrice(totalAmount)}`
+                  : `Xác nhận thanh toán · ${formatPrice(totalAmount)}`}
             </span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="5" y1="12" x2="19" y2="12" />
@@ -359,7 +477,7 @@ export default function PaymentView() {
           </button>
 
           <p className={styles.partnerNotice}>
-            Bạn sẽ chuyển đến trang thử nghiệm của đối tác. Chỉ xác nhận thanh toán sau khi máy chủ xác minh kết quả.
+            Hệ thống sẽ chuyển bạn sang Cổng thanh toán VNPay Sandbox. Trạng thái chỉ chuyển sang PAID sau khi VNPay gửi Webhook/IPN xác nhận.
           </p>
 
           <div className={styles.securityBadge}>
@@ -367,7 +485,7 @@ export default function PaymentView() {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <polyline points="9 12 11 14 15 10" />
             </svg>
-            <span>Không nhận tiền mặt · Không thu tiền trong bản thiết kế</span>
+            <span>Chữ ký số HMAC-SHA512 · Môi trường giả lập</span>
           </div>
         </div>
       </div>
