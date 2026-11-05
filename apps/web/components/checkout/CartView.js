@@ -22,11 +22,7 @@ export default function CartView() {
       alert('Giỏ hàng của bạn đang trống.');
       return;
     }
-    if (!user) {
-      router.push('/checkout/account');
-    } else {
-      navigateToStep('payment');
-    }
+    router.push('/checkout');
   };
 
   return (

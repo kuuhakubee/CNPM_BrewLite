@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
@@ -10,7 +11,6 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Check local storage for persistent mock session
     try {
       const savedUser = localStorage.getItem('brewlite_user');
       const savedToken = localStorage.getItem('brewlite_token');
@@ -26,12 +26,37 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setIsLoading(true);
     try {
-      // Lấy thông tin họ tên & phone nếu đã từng đăng ký
+      // 1. Kết nối API Backend thực tế
+      try {
+        const res = await authService.login(email, password);
+        if (res && res.accessToken && !res.accessToken.startsWith('mock-')) {
+          const userObj = {
+            id: res.user?.id,
+            email: res.user?.email || email,
+            name: res.user?.name || email.split('@')[0],
+            role: res.user?.role || 'CUSTOMER',
+            loyaltyPoints: res.user?.loyaltyPoints || 0,
+          };
+          setUser(userObj);
+          setToken(res.accessToken);
+          localStorage.setItem('brewlite_user', JSON.stringify(userObj));
+          localStorage.setItem('brewlite_token', res.accessToken);
+          return { success: true, user: userObj };
+        }
+      } catch (backendErr) {
+        console.warn('Backend API login không khả dụng, dùng phiên cục bộ:', backendErr?.message);
+      }
+
+      // 2. Fallback nếu backend đang tắt hoặc chưa kết nối DB
       let name = email.split('@')[0];
       let phone = '0901 234 567';
       try {
-        const storedUsers = JSON.parse(localStorage.getItem('brewlite_registered_users') || '[]');
-        const found = storedUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+        const storedUsers = JSON.parse(
+          localStorage.getItem('brewlite_registered_users') || '[]',
+        );
+        const found = storedUsers.find(
+          (u) => u.email.toLowerCase() === email.toLowerCase(),
+        );
         if (found) {
           name = found.name || name;
           phone = found.phone || phone;
@@ -58,17 +83,43 @@ export function AuthProvider({ children }) {
   const register = async (userData) => {
     setIsLoading(true);
     try {
+      try {
+        const res = await authService.register(userData);
+        if (res && res.accessToken && !res.accessToken.startsWith('mock-')) {
+          const userObj = {
+            id: res.user?.id,
+            email: res.user?.email || userData.email,
+            name: userData.fullName || userData.email.split('@')[0],
+            phone: userData.phone || '0901 234 567',
+            role: res.user?.role || 'CUSTOMER',
+          };
+          setUser(userObj);
+          setToken(res.accessToken);
+          localStorage.setItem('brewlite_user', JSON.stringify(userObj));
+          localStorage.setItem('brewlite_token', res.accessToken);
+          return { success: true, user: userObj };
+        }
+      } catch (err) {
+        console.warn('Backend API register không khả dụng, lưu tài khoản cục bộ:', err?.message);
+      }
+
       const newUser = {
         email: userData.email,
         name: userData.fullName,
         phone: userData.phone,
         role: 'CUSTOMER',
       };
-      // Lưu vào danh sách tài khoản đã đăng ký (không tự động đăng nhập để người dùng dùng nút Đăng nhập)
       try {
-        const storedUsers = JSON.parse(localStorage.getItem('brewlite_registered_users') || '[]');
-        const updated = storedUsers.filter((u) => u.email.toLowerCase() !== userData.email.toLowerCase()).concat([newUser]);
-        localStorage.setItem('brewlite_registered_users', JSON.stringify(updated));
+        const storedUsers = JSON.parse(
+          localStorage.getItem('brewlite_registered_users') || '[]',
+        );
+        const updated = storedUsers
+          .filter((u) => u.email.toLowerCase() !== userData.email.toLowerCase())
+          .concat([newUser]);
+        localStorage.setItem(
+          'brewlite_registered_users',
+          JSON.stringify(updated),
+        );
       } catch {}
 
       return { success: true, user: newUser };
@@ -87,7 +138,9 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, login, register, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

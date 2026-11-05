@@ -44,8 +44,8 @@ function LayoutInner({ children }) {
         onAuthClick={handleAuthClick}
         onCartClick={handleCartClick}
       />
+      
       <CheckoutStepper />
-
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {children}
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 // ─── Color Tokens (từ Figma) ────────────────────────────────
 const C = {

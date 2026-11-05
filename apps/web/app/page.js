@@ -8,7 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
 // Toggle flag: true = mock data (khi Task 2 backend chưa xong), false = gọi API NestJS thật
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 // ─── Color Tokens (khớp 100% Figma & Design System) ──────────
 const C = {
@@ -141,6 +141,11 @@ export default function HomePage() {
     return counts;
   }, [products]);
 
+  const scrollToStores = () => {
+    const el = document.getElementById("stores");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
   const scrollToMenu = () => {
     const el = document.getElementById("today-section");
     if (el) {
@@ -241,76 +246,7 @@ export default function HomePage() {
               paddingTop: "6px",
             }}
           >
-            {/* 1. NÚT ĐIỀU HƯỚNG SANG ĐĂNG NHẬP / TÀI KHOẢN */}
-            <button
-              type="button"
-              id="heroAuthBtn"
-              onClick={() => router.push("/login")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                backgroundColor: C.white,
-                color: C.primary,
-                border: `1.5px solid ${C.primary}`,
-                padding: "11px 20px",
-                borderRadius: "10px",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.18s ease",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = C.primaryLight;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = C.white;
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              <span>{displayName ? `Tài khoản: ${displayName}` : "Đăng nhập / Đăng ký"}</span>
-            </button>
-
-            {/* 2. NÚT ĐIỀU HƯỚNG SANG GIỎ HÀNG */}
-            <button
-              type="button"
-              id="heroCartBtn"
-              onClick={() => router.push("/cart")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                backgroundColor: "#e6efe9",
-                color: C.primary,
-                border: "1px solid #c9decb",
-                padding: "11px 20px",
-                borderRadius: "10px",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.18s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#d8e9dc";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#e6efe9";
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <path d="M16 10a4 4 0 0 1-8 0" />
-              </svg>
-              <span>Giỏ hàng ({itemCount} món)</span>
-            </button>
-
-          
-            {/* 4. NÚT CUỘN XUỐNG CHỌN MÓN */}
+            {/* NÚT CUỘN XUỐNG CHỌN MÓN */}
             <button
               type="button"
               onClick={scrollToMenu}
