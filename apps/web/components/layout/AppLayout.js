@@ -13,7 +13,8 @@ import { useRouter, usePathname } from 'next/navigation';
 function LayoutInner({ children }) {
   const { user, logout } = useAuth();
   const { itemCount } = useCart();
-  const { startAuthFlow, startCartFlow } = useCheckout();
+  const { startCartFlow } = useCheckout();
+  const router = useRouter();
   const pathname = usePathname();
 
   const isConfirmation = pathname?.includes('/confirmation');
@@ -24,9 +25,10 @@ function LayoutInner({ children }) {
     if (user) {
       if (confirm(`Bạn có muốn đăng xuất khỏi tài khoản ${user.email}?`)) {
         logout();
+        router.push('/login');
       }
     } else {
-      startAuthFlow();
+      router.push('/login');
     }
   };
 
@@ -36,13 +38,13 @@ function LayoutInner({ children }) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <TopBanner />
       <Header
         cartCount={displayCartCount}
         authButtonText={displayAuthName}
         onAuthClick={handleAuthClick}
         onCartClick={handleCartClick}
       />
+      
       <CheckoutStepper />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {children}

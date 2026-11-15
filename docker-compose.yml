@@ -32,7 +32,11 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me-local}@postgres:5432/${POSTGRES_DB:-brewlite_db}?schema=public
       - PORT=4000
       - JWT_SECRET=${JWT_SECRET:-change-me-in-local}
-      - PAYMENT_PROVIDER=${PAYMENT_PROVIDER:-mock}
+      - PAYMENT_PROVIDER=${PAYMENT_PROVIDER:-vnpay}
+      - VNP_TMN_CODE=${VNP_TMN_CODE:-HHLAZKIO}
+      - VNP_HASH_SECRET=${VNP_HASH_SECRET:-HABLURPFVBZMHOSDENDDTBDKNDGZDHCT}
+      - VNP_URL=${VNP_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      - VNP_RETURN_URL=${VNP_RETURN_URL:-http://localhost:3000/checkout/confirmation}
     ports:
       - "4000:4000"
     command: sh -c "npx prisma generate && npx prisma migrate deploy && node dist/main.js"
@@ -56,6 +60,9 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      - NEXT_PUBLIC_VNP_TMN_CODE=${VNP_TMN_CODE:-HHLAZKIO}
+      - NEXT_PUBLIC_VNP_HASH_SECRET=${VNP_HASH_SECRET:-HABLURPFVBZMHOSDENDDTBDKNDGZDHCT}
+      - NEXT_PUBLIC_VNP_URL=${VNP_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
     ports:
       - "3000:3000"
     depends_on:

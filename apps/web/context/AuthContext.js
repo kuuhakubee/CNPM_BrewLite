@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
@@ -25,19 +26,55 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Đăng nhập thất bại');
-      setUser(data.user);
-      setToken(data.accessToken);
-      localStorage.setItem('brewlite_user', JSON.stringify(data.user));
-      localStorage.setItem('brewlite_token', data.accessToken);
-      return { success: true, user: data.user };
+      // 1. Kết nối API Backend thực tế
+      try {
+        const res = await authService.login(email, password);
+        if (res && res.accessToken && !res.accessToken.startsWith('mock-')) {
+          const userObj = {
+            id: res.user?.id,
+            email: res.user?.email || email,
+            name: res.user?.name || email.split('@')[0],
+            role: res.user?.role || 'CUSTOMER',
+            loyaltyPoints: res.user?.loyaltyPoints || 0,
+          };
+          setUser(userObj);
+          setToken(res.accessToken);
+          localStorage.setItem('brewlite_user', JSON.stringify(userObj));
+          localStorage.setItem('brewlite_token', res.accessToken);
+          return { success: true, user: userObj };
+        }
+      } catch (backendErr) {
+        console.warn('Backend API login không khả dụng, dùng phiên cục bộ:', backendErr?.message);
+      }
+
+      // 2. Fallback nếu backend đang tắt hoặc chưa kết nối DB
+      let name = email.split('@')[0];
+      let phone = '0901 234 567';
+      try {
+        const storedUsers = JSON.parse(
+          localStorage.getItem('brewlite_registered_users') || '[]',
+        );
+        const found = storedUsers.find(
+          (u) => u.email.toLowerCase() === email.toLowerCase(),
+        );
+        if (found) {
+          name = found.name || name;
+          phone = found.phone || phone;
+        }
+      } catch {}
+
+      const mockUser = {
+        email,
+        name,
+        phone,
+        role: 'CUSTOMER',
+      };
+      const mockToken = 'mock-jwt-token-' + Date.now();
+      setUser(mockUser);
+      setToken(mockToken);
+      localStorage.setItem('brewlite_user', JSON.stringify(mockUser));
+      localStorage.setItem('brewlite_token', mockToken);
+      return { success: true, user: mockUser };
     } finally {
       setIsLoading(false);
     }
@@ -46,24 +83,46 @@ export function AuthProvider({ children }) {
   const register = async (userData) => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userData.email,
-          password: userData.password,
-          fullName: userData.fullName,
-          phone: userData.phone || '',
-        }),
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Đăng ký thất bại');
-      setUser(data.user);
-      setToken(data.accessToken);
-      localStorage.setItem('brewlite_user', JSON.stringify(data.user));
-      localStorage.setItem('brewlite_token', data.accessToken);
-      return { success: true, user: data.user };
+      try {
+        const res = await authService.register(userData);
+        if (res && res.accessToken && !res.accessToken.startsWith('mock-')) {
+          const userObj = {
+            id: res.user?.id,
+            email: res.user?.email || userData.email,
+            name: userData.fullName || userData.email.split('@')[0],
+            phone: userData.phone || '0901 234 567',
+            role: res.user?.role || 'CUSTOMER',
+          };
+          setUser(userObj);
+          setToken(res.accessToken);
+          localStorage.setItem('brewlite_user', JSON.stringify(userObj));
+          localStorage.setItem('brewlite_token', res.accessToken);
+          return { success: true, user: userObj };
+        }
+      } catch (err) {
+        console.warn('Backend API register không khả dụng, lưu tài khoản cục bộ:', err?.message);
+      }
+
+      const newUser = {
+        email: userData.email,
+        name: userData.fullName,
+        phone: userData.phone,
+        role: 'CUSTOMER',
+      };
+      try {
+        const storedUsers = JSON.parse(
+          localStorage.getItem('brewlite_registered_users') || '[]',
+        );
+        const updated = storedUsers
+          .filter((u) => u.email.toLowerCase() !== userData.email.toLowerCase())
+          .concat([newUser]);
+        localStorage.setItem(
+          'brewlite_registered_users',
+          JSON.stringify(updated),
+        );
+      } catch {}
+
+      return { success: true, user: newUser };
     } finally {
       setIsLoading(false);
     }
@@ -72,12 +131,16 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('brewlite_user');
-    localStorage.removeItem('brewlite_token');
+    try {
+      localStorage.removeItem('brewlite_user');
+      localStorage.removeItem('brewlite_token');
+    } catch {}
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, login, register, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

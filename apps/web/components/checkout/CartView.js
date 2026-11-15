@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Image from 'next/image';
@@ -22,18 +22,13 @@ export default function CartView() {
       alert('Giỏ hàng của bạn đang trống.');
       return;
     }
-    if (!user) {
-      router.push('/checkout/account');
-    } else {
-      navigateToStep('payment');
-    }
+    router.push('/checkout');
   };
 
   return (
     <div className={styles.container}>
       {/* Page Header */}
       <div className={styles.headerTitleGroup}>
-        <div className={styles.sectionBadge}>03 / GIỎ HÀNG</div>
         <h1 className={styles.pageTitle}>Một giỏ đầy cảm hứng.</h1>
         <p className={styles.pageSubtitle}>
           {itemCount > 0

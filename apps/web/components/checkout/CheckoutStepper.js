@@ -9,12 +9,12 @@ export default function CheckoutStepper() {
   const pathname = usePathname();
   const { stepperVisible, getSteps, navigateToStep } = useCheckout();
 
-  // 1. Ẩn thanh tiến trình nếu chưa kích hoạt từ Giỏ hàng hoặc Đăng nhập
+  // Thanh từ 1 đến 4 CHỈ hiện khi người dùng đã đăng nhập thành công
   if (!stepperVisible) {
     return null;
   }
 
-  // Lấy danh sách 4 bước theo thứ tự linh hoạt (Giỏ hàng trước hoặc Tài khoản trước)
+  // Lấy danh sách 4 bước theo thứ tự linh hoạt
   const steps = getSteps();
 
   // Xác định bước hiện tại dựa theo đường dẫn URL
@@ -35,14 +35,28 @@ export default function CheckoutStepper() {
         {steps.map((step, index) => {
           const isActive = step.key === currentKey;
           const isPassed = step.isCompleted && !isActive;
+          // Phần 1 (bước đầu tiên - index 0) luôn bị khóa, không thể can thiệp
+          const isLocked = index === 0;
 
           return (
             <React.Fragment key={step.key}>
               <button
                 type="button"
-                onClick={() => navigateToStep(step.key)}
-                className={`${styles.stepItem} ${isActive ? styles.stepItemActive : ''}`}
-                title={`Bước ${index + 1}: ${step.label}`}
+                onClick={() => {
+                  if (!isLocked) {
+                    navigateToStep(step.key);
+                  }
+                }}
+                className={`${styles.stepItem} ${isActive ? styles.stepItemActive : ''} ${
+                  isLocked ? styles.stepItemLocked : ''
+                }`}
+                title={
+                  isLocked
+                    ? `Bước ${index + 1}: ${step.label} (Đã khóa)`
+                    : `Bước ${index + 1}: ${step.label}`
+                }
+                aria-disabled={isLocked}
+                disabled={isLocked}
               >
                 <div
                   className={`${styles.stepCircle} ${
@@ -81,6 +95,7 @@ export default function CheckoutStepper() {
                   }`}
                 >
                   {step.label}
+                  {isLocked && ' 🔒'}
                 </span>
               </button>
 
