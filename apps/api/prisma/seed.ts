@@ -112,64 +112,66 @@ async function main() {
   }
 
   // ---------- 2b. Nguyên liệu (Ingredient) & công thức (ProductRecipe) ----------
-  // Công thức đơn giản cho MVP: mỗi sản phẩm dùng N nguyên liệu, mỗi nguyên liệu
-  // có đơn vị đo riêng (shot, ly, túi, miếng, cây, muỗng, thìa cà phê, quả...).
-  // Ví dụ: "Cà phê sữa" = 1 shot Espresso + 1 ly Sữa tươi.
+  // Chuẩn hóa theo tài liệu tối ưu F&B (advises.md):
+  // - Sữa tươi: ml (nhập theo lít/hộp)
+  // - Trân châu: gram
+  // - Đường: gram
+  // - Bọt sữa gộp vào Sữa tươi, loại bỏ Nước khỏi kho BOM
   const ingredientDefs = [
-    { name: 'Espresso', unit: 'shot', stock: 20 },
-    { name: 'Sữa tươi', unit: 'ly', stock: 100 },
-    { name: 'Nước', unit: 'ly', stock: 50 },
-    { name: 'Bọt sữa', unit: 'ly', stock: 50 },
-    { name: 'Trà', unit: 'túi', stock: 30 },
-    { name: 'Đào', unit: 'miếng', stock: 20 },
-    { name: 'Cam sả', unit: 'cây', stock: 20 },
-    { name: 'Trân châu', unit: 'muỗng', stock: 15 },
-    { name: 'Đường', unit: 'thìa cà phê', stock: 30 },
-    { name: 'Bơ', unit: 'quả', stock: 25 },
-    { name: 'Cam', unit: 'quả', stock: 30 },
+    { name: 'Espresso', unit: 'shot', stock: 60 },
+    { name: 'Sữa tươi', unit: 'ml', stock: 5000 },
+    { name: 'Trà', unit: 'túi', stock: 100 },
+    { name: 'Đào', unit: 'miếng', stock: 60 },
+    { name: 'Cam sả', unit: 'cây', stock: 40 },
+    { name: 'Trân châu', unit: 'gram', stock: 1500 },
+    { name: 'Đường', unit: 'gram', stock: 2000 },
+    { name: 'Bơ', unit: 'quả', stock: 30 },
+    { name: 'Cam', unit: 'quả', stock: 50 },
   ];
 
   const ingredients: Ingredient[] = [];
   for (const def of ingredientDefs) {
     const ingredient = await prisma.ingredient.upsert({
       where: { name: def.name },
-      update: { unit: def.unit },
+      update: { unit: def.unit, stock: def.stock },
       create: { name: def.name, unit: def.unit, stock: def.stock },
     });
     ingredients.push(ingredient);
   }
 
+  // Dọn dẹp công thức cũ để cập nhật theo bảng định lượng chuẩn mới
+  await prisma.productRecipe.deleteMany({});
+
   const recipeMap: Record<string, { ingredient: string; quantity: number }[]> = {
     'Cà phê sữa': [
       { ingredient: 'Espresso', quantity: 1 },
-      { ingredient: 'Sữa tươi', quantity: 1 },
+      { ingredient: 'Sữa tươi', quantity: 100 },
     ],
     Americano: [
       { ingredient: 'Espresso', quantity: 2 },
-      { ingredient: 'Nước', quantity: 1 },
     ],
     Cappuccino: [
       { ingredient: 'Espresso', quantity: 2 },
-      { ingredient: 'Bọt sữa', quantity: 1 },
+      { ingredient: 'Sữa tươi', quantity: 150 }, // Gồm cả sữa và bọt sữa đánh từ sữa tươi
     ],
     'Bạc xỉu': [
       { ingredient: 'Espresso', quantity: 1 },
-      { ingredient: 'Sữa tươi', quantity: 2 },
+      { ingredient: 'Sữa tươi', quantity: 180 },
     ],
     'Trà đào': [
       { ingredient: 'Trà', quantity: 1 },
-      { ingredient: 'Đào', quantity: 1 },
+      { ingredient: 'Đào', quantity: 2 },
       { ingredient: 'Cam sả', quantity: 1 },
     ],
     'Trà sữa trân châu': [
       { ingredient: 'Trà', quantity: 1 },
-      { ingredient: 'Sữa tươi', quantity: 1 },
-      { ingredient: 'Trân châu', quantity: 1 },
-      { ingredient: 'Đường', quantity: 1 },
+      { ingredient: 'Sữa tươi', quantity: 150 },
+      { ingredient: 'Trân châu', quantity: 30 },
+      { ingredient: 'Đường', quantity: 10 },
     ],
     'Sinh tố bơ': [
       { ingredient: 'Bơ', quantity: 1 },
-      { ingredient: 'Sữa tươi', quantity: 1 },
+      { ingredient: 'Sữa tươi', quantity: 100 },
     ],
     'Nước ép cam': [{ ingredient: 'Cam', quantity: 2 }],
   };
