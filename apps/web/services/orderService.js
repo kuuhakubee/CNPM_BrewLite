@@ -4,13 +4,18 @@ export const orderService = {
   /**
    * Tạo đơn hàng mới – yêu cầu JWT accessToken
    */
-  async createOrder(orderData, accessToken) {
+  async createOrder(orderData, accessToken, idempotencyKey) {
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    };
+    if (idempotencyKey) {
+      headers['idempotency-key'] = idempotencyKey;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/orders`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers,
       body: JSON.stringify(orderData),
     });
 
@@ -26,7 +31,7 @@ export const orderService = {
    * Lấy lịch sử đơn hàng của người dùng hiện tại
    */
   async getMyOrders(accessToken) {
-    const response = await fetch(`${API_BASE_URL}/api/v1/orders`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/orders/me`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

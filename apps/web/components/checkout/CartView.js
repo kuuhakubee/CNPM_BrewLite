@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Image from 'next/image';
@@ -22,7 +22,11 @@ export default function CartView() {
       alert('Giỏ hàng của bạn đang trống.');
       return;
     }
-    router.push('/checkout');
+    if (!user) {
+      router.push('/checkout/account');
+    } else {
+      router.push('/checkout/payment');
+    }
   };
 
   return (

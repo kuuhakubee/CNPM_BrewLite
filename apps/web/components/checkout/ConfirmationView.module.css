@@ -78,7 +78,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 28px;
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 860px) {
@@ -94,6 +94,7 @@
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  height: 100%;
 }
 
 .receiptTopRow {
@@ -247,6 +248,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  height: 100%;
 }
 
 .statusCard {
@@ -255,6 +257,7 @@
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  height: 100%;
 }
 
 .statusCardHeader {
@@ -393,6 +396,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 42px;
 }
 
 .primaryActionBtn {

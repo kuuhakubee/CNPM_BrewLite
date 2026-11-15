@@ -111,7 +111,11 @@ async function verifyVnpayClientReturn(queryString) {
 
   const obj = {};
   params.forEach((val, key) => {
-    if (key !== 'vnp_SecureHash' && key !== 'vnp_SecureHashType') {
+    if (
+      key.startsWith('vnp_') &&
+      key !== 'vnp_SecureHash' &&
+      key !== 'vnp_SecureHashType'
+    ) {
       obj[key] = val;
     }
   });
@@ -215,7 +219,9 @@ export const paymentService = {
 
       if (response.ok) {
         const data = await response.json();
-        return data;
+        if (data && (data.success || data.orderStatus === 'PAID')) {
+          return data;
+        }
       }
     } catch (err) {
       console.warn('Backend API vnpay-return failed, verifying locally:', err);

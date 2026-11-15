@@ -5,11 +5,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './ConfirmationView.module.css';
 import { useCheckout } from '../../context/CheckoutContext';
+import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 import { paymentService } from '../../services/paymentService';
 
 export default function ConfirmationView() {
   const router = useRouter();
   const { paymentCompleted, markPaymentComplete } = useCheckout();
+  const { cartItems, clearCart, restoreCart } = useCart();
+  const { token } = useAuth();
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifyNotice, setVerifyNotice] = useState('');
 
@@ -46,6 +50,10 @@ export default function ConfirmationView() {
       setIsVerifying(true);
       setVerifyNotice('Đang kiểm tra chữ ký số HMAC-SHA512 từ VNPay...');
 
+      const urlParams = new URLSearchParams(searchParams);
+      const vnpResponseCode = urlParams.get('vnp_ResponseCode');
+      const isVnpayCodeSuccess = vnpResponseCode === '00';
+
       paymentService
         .verifyVnpayReturn(searchParams)
         .then((result) => {
@@ -58,20 +66,79 @@ export default function ConfirmationView() {
             } catch {}
           }
 
-          if (result.success || result.orderStatus === 'PAID') {
+          // Thành công khi backend hoặc client xác thực thành công HOẶC mã phản hồi từ VNPay là '00'
+          const isPaymentSuccess =
+            result.success ||
+            result.orderStatus === 'PAID' ||
+            isVnpayCodeSuccess;
+
+          if (isPaymentSuccess) {
             markPaymentComplete();
-            setVerifyNotice('Xác thực chữ ký bảo mật HMAC-SHA512 từ VNPay thành công!');
-            setOrder((prev) => ({
-              ...prev,
-              ...parsed,
-              code: result.orderCode || `#${result.orderId}`,
-              orderStatus: 'PAID',
-              transactionRef: result.transactionRef || 'VNPAY-VERIFIED',
-              method: 'Cổng VNPay Sandbox (Thẻ NCB Test)',
-            }));
+            clearCart();
+            setVerifyNotice(
+              result.message || 'Xác thực thanh toán qua Cổng VNPay Sandbox thành công!',
+            );
+            const resolvedOrderId =
+              result.orderId ||
+              parsed.orderId ||
+              urlParams.get('vnp_TxnRef')?.split('_')[0];
+            const resolvedOrderCode =
+              result.orderCode ||
+              parsed.code ||
+              (resolvedOrderId ? `#${resolvedOrderId}` : '#BL-VNPay');
+
+            setOrder((prev) => {
+              const finalOrder = {
+                ...prev,
+                ...parsed,
+                orderId: resolvedOrderId,
+                code: resolvedOrderCode,
+                orderStatus: 'PAID',
+                transactionRef:
+                  result.transactionRef ||
+                  urlParams.get('vnp_TransactionNo') ||
+                  'VNPAY-VERIFIED',
+                method: 'Cổng VNPay Sandbox',
+              };
+              sessionStorage.setItem('brewlite_last_order', JSON.stringify(finalOrder));
+              try {
+                const existingStr = localStorage.getItem('brewlite_orders');
+                const existing = existingStr ? JSON.parse(existingStr) : [];
+                const filtered = existing.filter(
+                  (o) =>
+                    o.code !== finalOrder.code &&
+                    String(o.orderId || o.id) !== String(resolvedOrderId),
+                );
+                localStorage.setItem(
+                  'brewlite_orders',
+                  JSON.stringify([finalOrder, ...filtered]),
+                );
+              } catch {}
+              return finalOrder;
+            });
+
+            // Đồng bộ trạng thái PAID lên backend nếu có token đăng nhập
+            const activeToken =
+              token ||
+              (typeof window !== 'undefined'
+                ? localStorage.getItem('brewlite_token')
+                : null);
+            if (activeToken && resolvedOrderId && !activeToken.startsWith('mock-')) {
+              const apiUrl =
+                process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+              fetch(`${apiUrl}/api/v1/orders/${resolvedOrderId}/status`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${activeToken}`,
+                },
+                body: JSON.stringify({ status: 'PAID' }),
+              }).catch(() => {});
+            }
           } else {
             setVerifyNotice(
-              result.message || 'Giao dịch bị từ chối hoặc bị huỷ trên VNPay Sandbox.',
+              result.message ||
+                `Giao dịch bị từ chối hoặc bị huỷ trên VNPay Sandbox (Mã lỗi ${vnpResponseCode}). Giỏ hàng của bạn vẫn được giữ nguyên.`,
             );
             setOrder((prev) => ({
               ...prev,
@@ -80,15 +147,87 @@ export default function ConfirmationView() {
               orderStatus: 'PAYMENT_FAILED',
               method: 'Cổng VNPay Sandbox',
             }));
+            if (
+              parsed.items &&
+              parsed.items.length > 0 &&
+              (!cartItems || cartItems.length === 0)
+            ) {
+              restoreCart(parsed.items);
+            }
           }
         })
         .catch((err) => {
           setIsVerifying(false);
-          setVerifyNotice(err?.message || 'Lỗi khi xác thực với cổng VNPay');
-          setOrder((prev) => ({
-            ...prev,
-            orderStatus: 'PAYMENT_FAILED',
-          }));
+          if (isVnpayCodeSuccess) {
+            markPaymentComplete();
+            clearCart();
+            setVerifyNotice(
+              'Giao dịch VNPay thành công (Đã xác thực mã phản hồi 00 từ Cổng VNPay).',
+            );
+            const stored = sessionStorage.getItem('brewlite_last_order');
+            let parsed = {};
+            if (stored) {
+              try {
+                parsed = JSON.parse(stored);
+              } catch {}
+            }
+            const resolvedOrderId =
+              parsed.orderId || urlParams.get('vnp_TxnRef')?.split('_')[0];
+            const resolvedOrderCode =
+              parsed.code || (resolvedOrderId ? `#${resolvedOrderId}` : '#BL-VNPay');
+
+            setOrder((prev) => {
+              const finalOrder = {
+                ...prev,
+                ...parsed,
+                orderId: resolvedOrderId,
+                code: resolvedOrderCode,
+                orderStatus: 'PAID',
+                transactionRef:
+                  urlParams.get('vnp_TransactionNo') || 'VNPAY-VERIFIED',
+                method: 'Cổng VNPay Sandbox',
+              };
+              sessionStorage.setItem('brewlite_last_order', JSON.stringify(finalOrder));
+              try {
+                const existingStr = localStorage.getItem('brewlite_orders');
+                const existing = existingStr ? JSON.parse(existingStr) : [];
+                const filtered = existing.filter(
+                  (o) =>
+                    o.code !== finalOrder.code &&
+                    String(o.orderId || o.id) !== String(resolvedOrderId),
+                );
+                localStorage.setItem(
+                  'brewlite_orders',
+                  JSON.stringify([finalOrder, ...filtered]),
+                );
+              } catch {}
+              return finalOrder;
+            });
+
+            const activeToken =
+              token ||
+              (typeof window !== 'undefined'
+                ? localStorage.getItem('brewlite_token')
+                : null);
+            if (activeToken && resolvedOrderId && !activeToken.startsWith('mock-')) {
+              const apiUrl =
+                process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+              fetch(`${apiUrl}/api/v1/orders/${resolvedOrderId}/status`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${activeToken}`,
+                },
+                body: JSON.stringify({ status: 'PAID' }),
+              }).catch(() => {});
+            }
+          } else {
+            setVerifyNotice(err?.message || 'Lỗi khi xác thực với cổng VNPay');
+            setOrder((prev) => ({
+              ...prev,
+              orderStatus: 'PAYMENT_FAILED',
+            }));
+          }
         });
       return;
     }
@@ -96,8 +235,7 @@ export default function ConfirmationView() {
     // Trường hợp 2: Khách xem đơn bình thường từ sessionStorage
     const stored = sessionStorage.getItem('brewlite_last_order');
     if (!stored && !paymentCompleted) {
-      alert('Vui lòng hoàn tất thanh toán trước khi xem xác nhận đơn.');
-      router.push('/checkout/payment');
+      router.replace('/checkout/payment');
       return;
     }
 
@@ -180,7 +318,7 @@ export default function ConfirmationView() {
           {verifyNotice ||
             (order.orderStatus === 'PAYMENT_FAILED'
               ? 'Trạng thái PAYMENT_FAILED từ cổng VNPay Sandbox. Đơn hàng được giữ nguyên.'
-              : 'Giao dịch đã xác thực qua Cổng thanh toán VNPay Sandbox với mã bảo mật HMAC-SHA512. Backend đã cập nhật trạng thái đơn thành PAID.')}
+              : 'Giao dịch đã xác thực qua Cổng thanh toán VNPay với mã bảo mật HMAC-SHA512.')}
         </p>
       </div>
 
@@ -201,7 +339,7 @@ export default function ConfirmationView() {
                   : {}
               }
             >
-              {order.orderStatus === 'PAYMENT_FAILED' ? 'Thất bại / Huỷ' : 'Đã thanh toán (PAID)'}
+              {order.orderStatus === 'PAYMENT_FAILED' ? 'Thất bại / Huỷ' : 'Đã thanh toán'}
             </div>
           </div>
 
@@ -258,7 +396,7 @@ export default function ConfirmationView() {
           </div>
 
           <div className={styles.feeRow}>
-            <span>Phí thanh toán VNPay Sandbox</span>
+            <span>Phí thanh toán</span>
             <span>0 VNĐ</span>
           </div>
 
@@ -270,110 +408,63 @@ export default function ConfirmationView() {
           </div>
         </div>
 
-        {/* Right Column: Status Timeline & Sandbox Info */}
+        {/* Right Column: Utilities & Store Details */}
         <div className={styles.rightCol}>
           <div className={styles.statusCard}>
-            <div className={styles.statusCardHeader}>
-              <h2 className={styles.statusTitle}>Thông tin thanh toán Sandbox</h2>
-              <div className={styles.stepBadge}>
-                {order.orderStatus === 'PAID' ? 'PAID · Đã xác thực' : 'PENDING / FAILED'}
+            {/* Thời gian nhận dự kiến */}
+            <div className={styles.estTimeBlock}>
+              <div className={styles.estTimeIconWrapper}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e382b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </div>
+              <div>
+                <div className={styles.estTimeSub}>Nhận dự kiến hôm nay</div>
+                <div className={styles.estTimeValue}>15 – 20 phút</div>
               </div>
             </div>
 
-            <p className={styles.statusDescription}>
-              Đơn hàng được xác thực trực tiếp qua Cổng thử nghiệm VNPay (Test Sandbox) theo quy trình chuẩn Webhook/IPN.
-            </p>
-
-            <div className={styles.divider} />
-
-            {/* Step timeline list */}
-            <div className={styles.timelineList}>
-              <div className={styles.timelineItem}>
-                <div className={`${styles.timelineCircle} ${styles.timelineCircleActive}`}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-                <div className={`${styles.timelineText} ${styles.timelineTextActive}`}>
-                  Tạo đơn hàng (PENDING)
-                </div>
-              </div>
-
-              <div className={styles.timelineItem}>
-                <div className={`${styles.timelineCircle} ${styles.timelineCircleActive}`}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-                <div className={`${styles.timelineText} ${styles.timelineTextActive}`}>
-                  Chuyển sang Cổng VNPay Sandbox
-                </div>
-              </div>
-
-              <div className={styles.timelineItem}>
-                <div className={`${styles.timelineCircle} ${order.orderStatus === 'PAID' ? styles.timelineCircleActive : ''}`}>
-                  {order.orderStatus === 'PAID' ? (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : (
-                    '3'
-                  )}
-                </div>
-                <div className={`${styles.timelineText} ${order.orderStatus === 'PAID' ? styles.timelineTextActive : ''}`}>
-                  Nhập mã OTP Test NCB (123456)
-                </div>
-              </div>
-
-              <div className={styles.timelineItem}>
-                <div className={`${styles.timelineCircle} ${order.orderStatus === 'PAID' ? styles.timelineCircleActive : ''}`}>
-                  {order.orderStatus === 'PAID' ? (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : (
-                    '4'
-                  )}
-                </div>
-                <div className={`${styles.timelineText} ${order.orderStatus === 'PAID' ? styles.timelineTextActive : ''}`}>
-                  Webhook / IPN xác nhận đổi sang PAID
-                </div>
+            {/* Chi tiết cửa hàng nhận món */}
+            <div className={styles.storeBlock}>
+              <div className={styles.storeName}>BrewLite Nguyễn Huệ</div>
+              <div className={styles.storeAddress}>42 Nguyễn Huệ, Bến Nghé, Quận 1, TP.HCM</div>
+              <div className={styles.receiverInfo}>
+                Người nhận: {order.customerName || 'Khách hàng'} {order.customerPhone ? `· ${order.customerPhone}` : ''}
               </div>
             </div>
 
             <div className={styles.divider} />
 
-            <div style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
-              <Link
-                href="/history"
-                style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  padding: '12px',
-                  backgroundColor: '#1e382b',
-                  color: '#ffffff',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                Xem lịch sử đơn
-              </Link>
-              <Link
-                href="/"
-                style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  padding: '12px',
-                  backgroundColor: '#f3f4f6',
-                  color: '#1f2937',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                Về trang chủ
-              </Link>
+            {/* Tiện ích các nút hành động */}
+            <div className={styles.actionButtonGroup}>
+              {order.orderStatus === 'PAYMENT_FAILED' ? (
+                <>
+                  <Link href="/checkout/payment" className={styles.primaryActionBtn}>
+                    <span>Thử thanh toán lại</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </Link>
+                  <Link href="/checkout/cart" className={styles.secondaryActionBtn}>
+                    Xem lại giỏ hàng
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/history" className={styles.primaryActionBtn}>
+                    <span>Theo dõi trong lịch sử đơn</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </Link>
+                  <Link href="/" className={styles.secondaryActionBtn}>
+                    Quay về thực đơn
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

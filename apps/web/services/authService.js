@@ -2,51 +2,48 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export const authService = {
   /**
-   * Đăng nhập khách hàng
+   * Đăng nhập khách hàng: chỉ cho phép đăng nhập qua API backend & cơ sở dữ liệu
    */
   async login(email, password) {
+    let response;
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Đăng nhập không thành công');
-      }
-      return await response.json();
-    } catch (err) {
-      // In development / demo mode, fallback to simulation if backend is not reachable
-      console.warn('API backend not reachable, simulating login response:', err.message);
-      return {
-        accessToken: 'mock-jwt-token',
-        user: { email, role: 'CUSTOMER' },
-      };
+    } catch (networkErr) {
+      throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra dịch vụ backend.');
     }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Email hoặc mật khẩu không chính xác');
+    }
+
+    return await response.json();
   },
 
   /**
-   * Đăng ký tài khoản mới
+   * Đăng ký tài khoản mới lưu trực tiếp vào cơ sở dữ liệu
    */
   async register(userData) {
+    let response;
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Đăng ký không thành công');
-      }
-      return await response.json();
-    } catch (err) {
-      console.warn('API backend not reachable, simulating register response:', err.message);
-      return {
-        accessToken: 'mock-jwt-token',
-        user: { ...userData, role: 'CUSTOMER' },
-      };
+    } catch (networkErr) {
+      throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra dịch vụ backend.');
     }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Đăng ký không thành công');
+    }
+
+    return await response.json();
   },
 };
