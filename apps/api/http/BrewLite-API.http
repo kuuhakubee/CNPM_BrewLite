@@ -1,0 +1,85 @@
+@baseUrl = http://localhost:4000
+
+# ============================================================
+# BrewLite API - HTTP Test Collection
+# Base URL: {{baseUrl}} (mặc định: http://localhost:4000)
+# Endpoint business nằm dưới /api/v1, riêng /health và /auth
+# ============================================================
+
+# ---------- HEALTH ----------
+### [1] Health check: API + Database (mong muốn HTTP 200, DB "up")
+GET {{baseUrl}}/health
+
+# ---------- AUTH ----------
+### [2] Đăng ký tài khoản mới (cần email chưa đăng ký, password >= 8 ký tự)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "smoke@example.com",
+  "password": "password123",
+  "fullName": "Smoke Tester"
+}
+
+###
+
+### [3] Đăng nhập (lưu accessToken vào biến môi trường "accessToken")
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "smoke@example.com",
+  "password": "password123"
+}
+
+Tests
+  pm.environment.set("accessToken", pm.response.json().accessToken ?? "");
+
+###
+
+### [4] Đăng nhập sai mật khẩu (mong kết quả HTTP 401)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "smoke@example.com",
+  "password": "wrongpassword"
+}
+
+###
+
+# ---------- PRODUCTS ----------
+### [5] Lấy danh sách sản phẩm (public, mong HTTP 200)
+GET {{baseUrl}}/api/v1/products
+
+###
+
+### [6] Lấy chi tiết sản phẩm theo ID (public, ví dụ GET /api/v1/products/1)
+GET {{baseUrl}}/api/v1/products/1
+
+###
+
+# ---------- ORDERS ----------
+### [7] Tạo đơn hàng (cần JWT, body: items, subtotal/total > 0, discount >= 0)
+POST {{baseUrl}}/api/v1/orders
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "sizeCode": "M",
+      "qty": 1
+    }
+  ],
+  "subtotal": 35000,
+  "total": 35000,
+  "discount": 0
+}
+
+###
+
+### [8] Lấy lịch sử đơn hàng của user hiện tại (cần JWT)
+GET {{baseUrl}}/api/v1/orders/me
+Authorization: Bearer {{accessToken}}

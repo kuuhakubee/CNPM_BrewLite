@@ -1,6 +1,33 @@
-import { IsNumber, IsOptional, IsPositive, Min, IsString } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  Min,
+  IsString,
+  IsInt,
+  IsArray,
+  ArrayMinSize,
+} from 'class-validator';
+
+export class CreateOrderItemDto {
+  @IsInt({ message: 'productId phải là số nguyên' })
+  @Min(1, { message: 'productId phải lớn hơn 0' })
+  productId: number;
+
+  @IsOptional()
+  @IsString({ message: 'sizeCode phải là chuỗi' })
+  sizeCode?: string;
+
+  @IsInt({ message: 'qty phải là số nguyên' })
+  @Min(1, { message: 'qty phải lớn hơn 0' })
+  qty: number;
+}
 
 export class CreateOrderDto {
+  @IsArray()
+  @ArrayMinSize(1, { message: 'items phải có ít nhất một dòng sản phẩm' })
+  items: CreateOrderItemDto[];
+
   @IsNumber({}, { message: 'subtotal phải là số' })
   @IsPositive({ message: 'subtotal phải lớn hơn 0' })
   @Min(1, { message: 'subtotal tối thiểu 1' })
