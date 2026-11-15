@@ -62,4 +62,11 @@ Thumbs.db
 Assignment2-BrewLite.pdf
 BrewLite-CongNghePhanMem.pdf
 docs/sprint-backlog.tex
-FE_Design 
+FE_Design/
+
+# ---- LaTeX build artifacts ----
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+docs/

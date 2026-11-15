@@ -86,6 +86,9 @@ model Product {
   toppings     Topping[]     @relation("ProductAcceptsTopping")
   orderItems   OrderItem[]
 
+  // Công thức (recipe) của sản phẩm: tổng hợp các nguyên liệu + số lượng cần thiết
+  recipes      ProductRecipe[]
+
   @@map("products")
 }
 
@@ -114,6 +117,33 @@ model Topping {
   orderItemToppings OrderItemTopping[]
 
   @@map("toppings")
+}
+
+// Nguyên liệu có thể đo (theo đơn vị đo cụ thể), ví dụ: Espresso (shot),
+// Sữa tươi (ly), Trà (túi), Trân châu (muỗng), Đường (thìa cà phê)...
+model Ingredient {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  unit      String // Đơn vị đo: shot, ly, túi, miếng, cây, muỗng, thìa cà phê, quả...
+  stock     Int     @default(100)
+  createdAt DateTime @default(now())
+
+  recipes ProductRecipe[]
+
+  @@map("ingredients")
+}
+
+// Công thức sản phẩm: chỉ ra sản phẩm dùng bao nhiêu đơn vị của mỗi nguyên liệu
+model ProductRecipe {
+  id           Int     @id @default(autoincrement())
+  productId    Int
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  quantity     Int // Số lượng nguyên liệu (theo đơn vị `unit`) dùng cho 1 sản phẩm
+
+  @@unique([productId, ingredientId])
+  @@map("product_recipes")
 }
 
 model Order {

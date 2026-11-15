@@ -7,7 +7,7 @@
  * Idempotent (AC-16-3): chạy lại nhiều lần KHÔNG sinh dữ liệu trùng
  * nhờ upsert theo khóa unique (email, code, productId+code...).
  */
-import { PrismaClient, DiscountType } from '@prisma/client';
+import { PrismaClient, DiscountType, Ingredient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -111,6 +111,94 @@ async function main() {
     });
   }
 
+  // ---------- 2b. Nguyên liệu (Ingredient) & công thức (ProductRecipe) ----------
+  // Công thức đơn giản cho MVP: mỗi sản phẩm dùng N nguyên liệu, mỗi nguyên liệu
+  // có đơn vị đo riêng (shot, ly, túi, miếng, cây, muỗng, thìa cà phê, quả...).
+  // Ví dụ: "Cà phê sữa" = 1 shot Espresso + 1 ly Sữa tươi.
+  const ingredientDefs = [
+    { name: 'Espresso', unit: 'shot', stock: 20 },
+    { name: 'Sữa tươi', unit: 'ly', stock: 100 },
+    { name: 'Nước', unit: 'ly', stock: 50 },
+    { name: 'Bọt sữa', unit: 'ly', stock: 50 },
+    { name: 'Trà', unit: 'túi', stock: 30 },
+    { name: 'Đào', unit: 'miếng', stock: 20 },
+    { name: 'Cam sả', unit: 'cây', stock: 20 },
+    { name: 'Trân châu', unit: 'muỗng', stock: 15 },
+    { name: 'Đường', unit: 'thìa cà phê', stock: 30 },
+    { name: 'Bơ', unit: 'quả', stock: 25 },
+    { name: 'Cam', unit: 'quả', stock: 30 },
+  ];
+
+  const ingredients: Ingredient[] = [];
+  for (const def of ingredientDefs) {
+    const ingredient = await prisma.ingredient.upsert({
+      where: { name: def.name },
+      update: { unit: def.unit },
+      create: { name: def.name, unit: def.unit, stock: def.stock },
+    });
+    ingredients.push(ingredient);
+  }
+
+  const recipeMap: Record<string, { ingredient: string; quantity: number }[]> = {
+    'Cà phê sữa': [
+      { ingredient: 'Espresso', quantity: 1 },
+      { ingredient: 'Sữa tươi', quantity: 1 },
+    ],
+    Americano: [
+      { ingredient: 'Espresso', quantity: 2 },
+      { ingredient: 'Nước', quantity: 1 },
+    ],
+    Cappuccino: [
+      { ingredient: 'Espresso', quantity: 2 },
+      { ingredient: 'Bọt sữa', quantity: 1 },
+    ],
+    'Bạc xỉu': [
+      { ingredient: 'Espresso', quantity: 1 },
+      { ingredient: 'Sữa tươi', quantity: 2 },
+    ],
+    'Trà đào': [
+      { ingredient: 'Trà', quantity: 1 },
+      { ingredient: 'Đào', quantity: 1 },
+      { ingredient: 'Cam sả', quantity: 1 },
+    ],
+    'Trà sữa trân châu': [
+      { ingredient: 'Trà', quantity: 1 },
+      { ingredient: 'Sữa tươi', quantity: 1 },
+      { ingredient: 'Trân châu', quantity: 1 },
+      { ingredient: 'Đường', quantity: 1 },
+    ],
+    'Sinh tố bơ': [
+      { ingredient: 'Bơ', quantity: 1 },
+      { ingredient: 'Sữa tươi', quantity: 1 },
+    ],
+    'Nước ép cam': [{ ingredient: 'Cam', quantity: 2 }],
+  };
+
+  for (const [productName, lines] of Object.entries(recipeMap)) {
+    const product = await prisma.product.findFirst({ where: { name: productName } });
+    if (!product) continue;
+    for (const line of lines) {
+      const ingredient = ingredients.find((i) => i.name === line.ingredient);
+      if (!ingredient) continue;
+      await prisma.productRecipe.upsert({
+        where: { productId_ingredientId: { productId: product.id, ingredientId: ingredient.id } },
+        update: { quantity: line.quantity },
+        create: { productId: product.id, ingredientId: ingredient.id, quantity: line.quantity },
+      });
+    }
+
+    // Đồng bộ Product.stock ban đầu dựa trên nguyên liệu trong DB theo recipe
+    const maxServings = lines.map((line) => {
+      const ing = ingredients.find((i) => i.name === line.ingredient);
+      return ing && line.quantity > 0 ? Math.floor(ing.stock / line.quantity) : 0;
+    });
+    const calculatedStock = maxServings.length > 0 ? Math.min(...maxServings) : 0;
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { stock: calculatedStock },
+    });
+  }
+
   // ---------- 3. Khuyến mãi (≥ 1) ----------
   await prisma.promotion.upsert({
     where: { code: 'WELCOME10' },
@@ -128,7 +216,9 @@ async function main() {
     },
   });
 
-  console.log(`Seed done. Demo user id=${demoUser.id}, products=${products.length}, toppings=${toppings.length}.`);
+  console.log(
+    `Seed done. Demo user id=${demoUser.id}, products=${products.length}, toppings=${toppings.length}, ingredients=${ingredients.length}, recipes=${Object.keys(recipeMap).length}.`,
+  );
 }
 
 // Helpers: tìm id theo tên/email để upsert idempotent (schema không có @unique cho name)
