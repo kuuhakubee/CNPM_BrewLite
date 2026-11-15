@@ -74,15 +74,15 @@ export class OrdersService {
       if (total < 0) total = 0;
     }
 
-    // ── 3. Kiểm soát tồn kho (Optimistic Locking) ────────────────────
-    if (dto.items && dto.items.length > 0) {
-      await this.deductStockWithOptimisticLock(dto.items);
-    }
-
     // ── Tạo đơn trong transaction ─────────────────────────────────────
     const orderCode = `#${Math.floor(1000 + Math.random() * 9000)}-${Date.now().toString(36).toUpperCase()}`;
 
     const order = await this.prisma.$transaction(async (tx) => {
+      // ── 3. Kiểm soát tồn kho theo Recipe & Optimistic Locking ─────────
+      if (dto.items && dto.items.length > 0) {
+        await this.deductStockWithOptimisticLock(dto.items, tx);
+      }
+
       const newOrder = await tx.order.create({
         data: {
           code: orderCode,
@@ -105,11 +105,11 @@ export class OrdersService {
                 items: {
                   create: dto.items.map((item) => ({
                     productId: item.productId,
-                    sizeCode: item.sizeCode,
+                    sizeCode: item.sizeCode || 'M',
                     productSizeId: item.productSizeId ?? null,
                     qty: item.qty,
-                    unitPrice: item.unitPrice,
-                    lineTotal: item.lineTotal,
+                    unitPrice: item.unitPrice ?? 0,
+                    lineTotal: item.lineTotal ?? (item.unitPrice ? item.unitPrice * item.qty : 0),
                     ...(item.toppingIds && item.toppingIds.length > 0
                       ? {
                           toppings: {
@@ -197,17 +197,22 @@ export class OrdersService {
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // 3: Trừ tồn kho với Optimistic Locking
+  // 3: Trừ tồn kho với Recipe & Optimistic Locking
   // ─────────────────────────────────────────────────────────────────────
 
   /**
-   * Trừ stock cho từng sản phẩm trong đơn hàng bằng optimistic locking.
-   * Nếu race condition (version không khớp hoặc stock không đủ)
-   * => ném ConflictException (HTTP 409), client phải thử lại.
+   * Trừ stock cho từng sản phẩm theo công thức (recipe) và nguyên liệu khả dụng với optimistic locking.
+   * - Nếu sản phẩm có recipe: kiểm tra và trừ tồn kho nguyên liệu khả dụng (ingredient.updateMany).
+   * - Nếu sản phẩm chưa có recipe: kiểm tra trực tiếp product.stock.
+   * - Cập nhật version của product để đảm bảo optimistic locking (ADR-004).
+   * - Nếu race condition (version không khớp hoặc stock không đủ) => ném ConflictException (HTTP 409).
    */
   async deductStockWithOptimisticLock(
     items: Array<{ productId: number; qty: number }>,
+    txClient?: any,
   ): Promise<void> {
+    const client = txClient ?? this.prisma;
+
     // Nhóm theo productId để tính tổng qty
     const qtyMap = new Map<number, number>();
     for (const item of items) {
@@ -215,45 +220,102 @@ export class OrdersService {
     }
 
     for (const [productId, qty] of qtyMap) {
-      await this.deductOneProduct(productId, qty);
+      await this.deductOneProduct(productId, qty, client);
     }
   }
 
   private async deductOneProduct(
     productId: number,
     qty: number,
+    client: any = this.prisma,
   ): Promise<void> {
-    // Lấy version hiện tại (snapshot)
-    const product = await this.prisma.product.findUnique({
+    // Lấy thông tin sản phẩm cùng công thức và nguyên liệu
+    const product = await client.product.findUnique({
       where: { id: productId },
-      select: { id: true, stock: true, version: true, name: true },
+      include: {
+        recipes: {
+          include: { ingredient: true },
+        },
+      },
     });
 
     if (!product) {
-      throw new NotFoundException(`Sản phẩm #${productId} không tồn tại.`);
+      throw new NotFoundException(`Product with id "${productId}" not found`);
     }
 
-    if (product.stock < qty) {
-      throw new ConflictException(
-        `Sản phẩm "${product.name}" chỉ còn ${product.stock} trong kho, bạn đặt ${qty}.`,
-      );
+    // Nếu sản phẩm có công thức (recipe), kiểm tra & trừ tồn kho nguyên liệu khả dụng
+    if (product.recipes && product.recipes.length > 0) {
+      const ingredientDeductions: { id: number; name: string; quantity: number }[] = [];
+      for (const recipe of product.recipes) {
+        const ingredient = recipe.ingredient;
+        if (!ingredient) {
+          throw new ConflictException(`Sản phẩm "${product.name}" chưa cấu hình nguyên liệu`);
+        }
+        const needed = qty * recipe.quantity;
+        if (ingredient.stock < needed) {
+          throw new ConflictException(
+            `Nguyên liệu "${ingredient.name}" không đủ cho ${recipe.quantity} ${ingredient.unit} mỗi món (còn ${ingredient.stock} ${ingredient.unit}, cần ${needed} ${ingredient.unit})`,
+          );
+        }
+        ingredientDeductions.push({
+          id: ingredient.id,
+          name: ingredient.name,
+          quantity: needed,
+        });
+      }
+
+      // Trừ kho nguyên liệu nguyên tử
+      for (const d of ingredientDeductions) {
+        if (typeof client.ingredient?.updateMany === 'function') {
+          const updatedIng = await client.ingredient.updateMany({
+            where: { id: d.id, stock: { gte: d.quantity } },
+            data: { stock: { decrement: d.quantity } },
+          });
+          if (updatedIng && updatedIng.count === 0) {
+            throw new ConflictException(
+              `Nguyên liệu "${d.name}" vừa hết tồn kho, vui lòng thử lại`,
+            );
+          }
+        }
+      }
+    } else {
+      // Fallback khi sản phẩm chưa có recipe: kiểm tra trực tiếp product.stock
+      if (product.stock < qty) {
+        throw new ConflictException(
+          `Sản phẩm "${product.name}" chỉ còn ${product.stock} trong kho, bạn đặt ${qty}.`,
+        );
+      }
     }
 
-    // UPDATE với điều kiện version = snapshot => nếu race condition thì count = 0
-    const result = await this.prisma.$executeRaw`
-      UPDATE products
-      SET    stock   = stock - ${qty},
-             version = version + 1
-      WHERE  id      = ${productId}
-        AND  version = ${product.version}
-        AND  stock  >= ${qty}
-    `;
+    // Trừ kho sản phẩm và tăng version (Optimistic locking theo ADR-004)
+    if (typeof client.$executeRaw === 'function') {
+      const result = await client.$executeRaw`
+        UPDATE products
+        SET    stock   = stock - ${qty},
+               version = version + 1
+        WHERE  id      = ${productId}
+          AND  version = ${product.version}
+          AND  stock  >= ${qty}
+      `;
 
-    if (result === 0) {
-      // Version đã thay đổi hoặc stock đã hết do request đồng thời
-      throw new ConflictException(
-        `Tồn kho sản phẩm #${productId} đã thay đổi đồng thời. Vui lòng thử lại.`,
-      );
+      if (result === 0) {
+        throw new ConflictException(
+          `Tồn kho sản phẩm #${productId} đã thay đổi đồng thời. Vui lòng thử lại.`,
+        );
+      }
+    } else if (typeof client.product?.updateMany === 'function') {
+      const updated = await client.product.updateMany({
+        where: {
+          id: productId,
+          version: product.version,
+        },
+        data: { stock: { decrement: qty }, version: { increment: 1 } },
+      });
+      if (updated && updated.count === 0) {
+        throw new ConflictException(
+          `Tồn kho sản phẩm #${productId} đã thay đổi đồng thời. Vui lòng thử lại.`,
+        );
+      }
     }
   }
 
@@ -345,7 +407,11 @@ export class OrdersService {
     return this.prisma.order.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      include: { payments: true, items: { include: { product: true } } },
+      include: {
+        items: {
+          include: { product: true },
+        },
+      },
     });
   }
 

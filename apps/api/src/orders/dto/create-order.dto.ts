@@ -21,6 +21,16 @@ export class CreateOrderItemDto {
   @IsInt({ message: 'qty phải là số nguyên' })
   @Min(1, { message: 'qty phải lớn hơn 0' })
   qty: number;
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  unitPrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  lineTotal?: number;
 }
 
 export class CreateOrderDto {

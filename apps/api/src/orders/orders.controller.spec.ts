@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { OrdersController } from './orders.controller';
+import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderWithItemsDto } from './dto/create-order-with-items.dto';
 
 describe('OrdersController', () => {
   let controller: OrdersController;
@@ -31,6 +32,7 @@ describe('OrdersController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [OrdersController],
       providers: [
+        OrdersService,
         {
           provide: PrismaService,
           useValue: mockPrismaService,
@@ -48,7 +50,7 @@ describe('OrdersController', () => {
 
   describe('createOrder', () => {
     const req = { user: { id: 1 } };
-    const dto: CreateOrderDto = {
+    const dto: CreateOrderWithItemsDto = {
       items: [{ productId: 1, qty: 2, sizeCode: 'M' }],
       subtotal: 70000,
       total: 70000,

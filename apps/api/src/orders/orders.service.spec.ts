@@ -40,6 +40,10 @@ const mockPrismaService = {
   },
   product: {
     findUnique: jest.fn(),
+    updateMany: jest.fn(),
+  },
+  ingredient: {
+    updateMany: jest.fn(),
   },
   promotion: {
     findUnique: jest.fn(),
@@ -266,6 +270,52 @@ describe('OrdersService', () => {
       expect(result.idempotent).toBe(false);
       expect(mockPrismaService.order.findFirst).not.toHaveBeenCalled();
     });
+
+    it('Tạo đơn kèm items: thực thi trừ kho nguyên liệu theo recipe trong transaction', async () => {
+      const mockTxClient = {
+        product: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 1,
+            name: 'Cà phê sữa',
+            stock: 20,
+            version: 0,
+            recipes: [
+              {
+                quantity: 1,
+                ingredient: { id: 10, name: 'Espresso', unit: 'shot', stock: 20 },
+              },
+            ],
+          }),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        ingredient: {
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        order: {
+          create: jest.fn().mockResolvedValue(makeOrder({ id: 5 })),
+        },
+      };
+
+      mockPrismaService.$transaction.mockImplementationOnce(async (fn) =>
+        fn(mockTxClient),
+      );
+
+      const result = await service.createOrder(10, {
+        subtotal: 35000,
+        total: 35000,
+        items: [{ productId: 1, qty: 2, sizeCode: 'M' }],
+      });
+
+      expect(result.idempotent).toBe(false);
+      expect(mockTxClient.ingredient.updateMany).toHaveBeenCalledWith({
+        where: { id: 10, stock: { gte: 2 } },
+        data: { stock: { decrement: 2 } },
+      });
+      expect(mockTxClient.product.updateMany).toHaveBeenCalledWith({
+        where: { id: 1, version: 0 },
+        data: { stock: { decrement: 2 }, version: { increment: 1 } },
+      });
+    });
   });
 
   // ══════════════════════════════════════════════════════════════════════
@@ -342,6 +392,163 @@ describe('OrdersService', () => {
       await expect(
         service.deductStockWithOptimisticLock([{ productId: 1, qty: 3 }]),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════
+  // RECIPE & INGREDIENT INVENTORY DEDUCTION
+  // ══════════════════════════════════════════════════════════════════════
+  describe('Recipe & Ingredient Inventory Deduction', () => {
+    it('trừ tồn kho từng nguyên liệu theo tỉ lệ công thức (recipe) khi bán sản phẩm', async () => {
+      // Mock product with recipes: Americano (2 shots Espresso, 1 ly Nước)
+      mockPrismaService.product.findUnique.mockResolvedValueOnce({
+        id: 2,
+        name: 'Americano',
+        stock: 10,
+        version: 1,
+        recipes: [
+          {
+            quantity: 2,
+            ingredient: { id: 1, name: 'Espresso', unit: 'shot', stock: 20 },
+          },
+          {
+            quantity: 1,
+            ingredient: { id: 3, name: 'Nước', unit: 'ly', stock: 50 },
+          },
+        ],
+      });
+      mockPrismaService.ingredient.updateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 1 });
+      mockPrismaService.$executeRaw.mockResolvedValueOnce(1);
+
+      // Khách mua 3 ly Americano -> cần 6 shots Espresso, 3 ly Nước
+      await service.deductStockWithOptimisticLock([{ productId: 2, qty: 3 }]);
+
+      // Kiểm tra trừ Espresso: 3 * 2 = 6
+      expect(mockPrismaService.ingredient.updateMany).toHaveBeenCalledWith({
+        where: { id: 1, stock: { gte: 6 } },
+        data: { stock: { decrement: 6 } },
+      });
+
+      // Kiểm tra trừ Nước: 3 * 1 = 3
+      expect(mockPrismaService.ingredient.updateMany).toHaveBeenCalledWith({
+        where: { id: 3, stock: { gte: 3 } },
+        data: { stock: { decrement: 3 } },
+      });
+
+      // Kiểm tra gọi optimistic locking cho product
+      expect(mockPrismaService.$executeRaw).toHaveBeenCalled();
+    });
+
+    it('ném ConflictException khi một trong các nguyên liệu của công thức không đủ tồn kho', async () => {
+      mockPrismaService.product.findUnique.mockResolvedValueOnce({
+        id: 2,
+        name: 'Americano',
+        stock: 10,
+        version: 1,
+        recipes: [
+          {
+            quantity: 2,
+            ingredient: { id: 1, name: 'Espresso', unit: 'shot', stock: 3 }, // Cần 4 (2*2), chỉ còn 3
+          },
+          {
+            quantity: 1,
+            ingredient: { id: 3, name: 'Nước', unit: 'ly', stock: 50 },
+          },
+        ],
+      });
+
+      await expect(
+        service.deductStockWithOptimisticLock([{ productId: 2, qty: 2 }]),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('ném ConflictException khi nguyên liệu vừa hết do giao dịch đồng thời', async () => {
+      mockPrismaService.product.findUnique.mockResolvedValueOnce({
+        id: 1,
+        name: 'Cà phê sữa',
+        stock: 20,
+        version: 0,
+        recipes: [
+          {
+            quantity: 1,
+            ingredient: { id: 10, name: 'Espresso', unit: 'shot', stock: 5 },
+          },
+        ],
+      });
+
+      // updateMany trả về count = 0 (race condition: nguyên liệu đã bị trừ bởi transaction khác)
+      mockPrismaService.ingredient.updateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        service.deductStockWithOptimisticLock([{ productId: 1, qty: 2 }]),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('trừ đúng nguyên liệu cho đơn hàng gồm nhiều món khác nhau', async () => {
+      // Món 1: Cà phê sữa (1 shot Espresso, 1 ly Sữa) -> mua 2 ly
+      mockPrismaService.product.findUnique.mockResolvedValueOnce({
+        id: 1,
+        name: 'Cà phê sữa',
+        stock: 20,
+        version: 0,
+        recipes: [
+          {
+            quantity: 1,
+            ingredient: { id: 10, name: 'Espresso', unit: 'shot', stock: 20 },
+          },
+          {
+            quantity: 1,
+            ingredient: { id: 11, name: 'Sữa tươi', unit: 'ly', stock: 50 },
+          },
+        ],
+      });
+      // Món 2: Americano (2 shot Espresso, 1 ly Nước) -> mua 1 ly
+      mockPrismaService.product.findUnique.mockResolvedValueOnce({
+        id: 2,
+        name: 'Americano',
+        stock: 10,
+        version: 0,
+        recipes: [
+          {
+            quantity: 2,
+            ingredient: { id: 10, name: 'Espresso', unit: 'shot', stock: 20 },
+          },
+          {
+            quantity: 1,
+            ingredient: { id: 12, name: 'Nước', unit: 'ly', stock: 50 },
+          },
+        ],
+      });
+
+      mockPrismaService.ingredient.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.$executeRaw.mockResolvedValue(1);
+
+      await service.deductStockWithOptimisticLock([
+        { productId: 1, qty: 2 },
+        { productId: 2, qty: 1 },
+      ]);
+
+      // Món 1: trừ 2 Espresso và 2 Sữa
+      expect(mockPrismaService.ingredient.updateMany).toHaveBeenCalledWith({
+        where: { id: 10, stock: { gte: 2 } },
+        data: { stock: { decrement: 2 } },
+      });
+      expect(mockPrismaService.ingredient.updateMany).toHaveBeenCalledWith({
+        where: { id: 11, stock: { gte: 2 } },
+        data: { stock: { decrement: 2 } },
+      });
+
+      // Món 2: trừ 2 Espresso và 1 Nước
+      expect(mockPrismaService.ingredient.updateMany).toHaveBeenCalledWith({
+        where: { id: 10, stock: { gte: 2 } },
+        data: { stock: { decrement: 2 } },
+      });
+      expect(mockPrismaService.ingredient.updateMany).toHaveBeenCalledWith({
+        where: { id: 12, stock: { gte: 1 } },
+        data: { stock: { decrement: 1 } },
+      });
     });
   });
 

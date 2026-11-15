@@ -196,6 +196,9 @@ export default function ProductDetail({ params }) {
             tagline: data.description ? `Đậm một chút, êm thật lâu.` : MOCK_PRODUCT.tagline,
             description: data.description || MOCK_PRODUCT.description,
             allergyNote: "Có thể chứa sữa và yến mạch. Vui lòng kiểm tra trước khi đặt.",
+            recipes: data.recipes || [],
+            stock: data.stock !== undefined ? data.stock : 100,
+            isAvailable: data.isAvailable !== undefined ? data.isAvailable : true,
             sugarLevels: [
               { code: "0", label: "0%" },
               { code: "30", label: "30%" },
@@ -384,6 +387,58 @@ export default function ProductDetail({ params }) {
               {product.allergyNote}
             </p>
           </div>
+
+          {/* Công thức nguyên liệu (Recipe) */}
+          {product.recipes && product.recipes.length > 0 && (
+            <div
+              style={{
+                background: C.tagBeige,
+                borderRadius: "12px",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                border: `1px solid ${C.border}`,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>
+                  Công thức định lượng:
+                </span>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: product.stock > 0 ? C.primary : "#c53030",
+                    background: product.stock > 0 ? C.primaryLight : "#fed7d7",
+                    padding: "3px 8px",
+                    borderRadius: "100px",
+                  }}
+                >
+                  {product.stock > 0
+                    ? `Tồn kho khả dụng: ${product.stock} ly`
+                    : "Tạm hết nguyên liệu"}
+                </span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {product.recipes.map((r, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      fontSize: "12px",
+                      color: C.text,
+                      background: "#fff",
+                      border: `1px solid ${C.border}`,
+                      borderRadius: "6px",
+                      padding: "4px 8px",
+                    }}
+                  >
+                    🌱 {r.quantity} {r.unit} {r.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Right: Options ── */}
@@ -424,21 +479,38 @@ export default function ProductDetail({ params }) {
             {product.name}
           </h1>
 
-          {/* Base price */}
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <span
-              style={{
-                fontSize: "24px",
-                fontWeight: 600,
-                color: C.price,
-                lineHeight: "37.2px",
-              }}
-            >
-              {fmt(product.basePrice)}
-            </span>
-            <span style={{ fontSize: "13px", color: C.textMuted, lineHeight: "20.1px" }}>
-              {product.baseSizeLabel}
-            </span>
+          {/* Base price & Stock */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <span
+                style={{
+                  fontSize: "24px",
+                  fontWeight: 600,
+                  color: C.price,
+                  lineHeight: "37.2px",
+                }}
+              >
+                {fmt(product.basePrice)}
+              </span>
+              <span style={{ fontSize: "13px", color: C.textMuted, lineHeight: "20.1px" }}>
+                {product.baseSizeLabel}
+              </span>
+            </div>
+            {product.stock !== undefined && (
+              <span
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: product.stock > 0 ? C.primary : "#e53e3e",
+                  background: product.stock > 0 ? C.primaryLight : "#fff5f5",
+                  border: `1px solid ${product.stock > 0 ? "#cce0d8" : "#fed7d7"}`,
+                  padding: "4px 10px",
+                  borderRadius: "20px",
+                }}
+              >
+                {product.stock > 0 ? `Tồn kho: ${product.stock} ly` : "Hết hàng"}
+              </span>
+            )}
           </div>
 
           <Divider />
@@ -661,29 +733,71 @@ export default function ProductDetail({ params }) {
           </div>
 
           {/* Add to cart button */}
-          <button
-            onClick={handleAddToCart}
-            style={{
-              width: "100%",
-              height: "50px",
-              background: C.primary,
-              color: "#ffffff",
-              border: `1px solid ${C.primary}`,
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "12px",
-              fontSize: "15px",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "opacity 0.15s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-          >
-            <span>Thêm vào giỏ hàng · {fmt(totalPrice)}</span>
-          </button>
+          {product.stock !== undefined && product.stock <= 0 ? (
+            <button
+              disabled
+              style={{
+                width: "100%",
+                height: "50px",
+                background: "#ccc",
+                color: "#666",
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "15px",
+                fontWeight: 600,
+                cursor: "not-allowed",
+              }}
+            >
+              <span>Tạm hết hàng (hết nguyên liệu)</span>
+            </button>
+          ) : product.stock !== undefined && qty > product.stock ? (
+            <button
+              disabled
+              style={{
+                width: "100%",
+                height: "50px",
+                background: "#f8b4b4",
+                color: "#9b1c1c",
+                border: "1px solid #f8b4b4",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "15px",
+                fontWeight: 600,
+                cursor: "not-allowed",
+              }}
+            >
+              <span>Vượt quá tồn kho ({product.stock} ly khả dụng)</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              style={{
+                width: "100%",
+                height: "50px",
+                background: C.primary,
+                color: "#ffffff",
+                border: `1px solid ${C.primary}`,
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "12px",
+                fontSize: "15px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "opacity 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+            >
+              <span>Thêm vào giỏ hàng · {fmt(totalPrice)}</span>
+            </button>
+          )}
         </div>
 
       </div>

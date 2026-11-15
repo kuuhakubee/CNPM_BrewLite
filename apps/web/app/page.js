@@ -839,6 +839,26 @@ export default function HomePage() {
                         {p.description}
                       </p>
 
+                      {/* Recipe Ingredients */}
+                      {p.recipes && p.recipes.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "4px 0" }}>
+                          {p.recipes.map((r, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                fontSize: "11px",
+                                background: C.tagBeige,
+                                color: C.text,
+                                borderRadius: "4px",
+                                padding: "2px 6px",
+                              }}
+                            >
+                              🌱 {r.quantity} {r.unit} {r.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
                       {/* Giá và nút chọn món */}
                       <div
                         style={{
@@ -850,58 +870,89 @@ export default function HomePage() {
                           borderTop: `1px solid ${C.border}`,
                         }}
                       >
-                        <span
-                          style={{
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            color: C.primary,
-                          }}
-                        >
-                          {fmt(Number(p.price) || 0)}
-                        </span>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span
+                            style={{
+                              fontSize: "16px",
+                              fontWeight: 600,
+                              color: C.primary,
+                            }}
+                          >
+                            {fmt(Number(p.price) || 0)}
+                          </span>
+                          {p.stock !== undefined && (
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                color: p.stock > 0 ? C.textMuted : "#c53030",
+                                fontWeight: p.stock > 0 ? 400 : 600,
+                              }}
+                            >
+                              {p.stock > 0 ? `Còn ${p.stock} phần` : "Hết nguyên liệu"}
+                            </span>
+                          )}
+                        </div>
 
-                        <Link
-                          href={`/product/${p.id}`}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            background: isHovered ? C.primaryHover : C.primary,
-                            color: "#ffffff",
-                            padding: "8px 14px",
-                            borderRadius: "8px",
-                            fontSize: "13px",
-                            fontWeight: 600,
-                            textDecoration: "none",
-                            transform: isHovered ? "scale(1.04)" : "scale(1)",
-                            boxShadow: isHovered
-                              ? "0 4px 12px rgba(40, 84, 70, 0.25)"
-                              : "none",
-                            transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                          }}
-                        >
-                          <span>Chọn món</span>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                            <line
-                              x1="12"
-                              y1="5"
-                              x2="12"
-                              y2="19"
-                              stroke="#ffffff"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                            />
-                            <line
-                              x1="5"
-                              y1="12"
-                              x2="19"
-                              y2="12"
-                              stroke="#ffffff"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                        </Link>
+                        {p.stock === 0 ? (
+                          <span
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              background: "#eee",
+                              color: "#888",
+                              padding: "8px 14px",
+                              borderRadius: "8px",
+                              fontSize: "13px",
+                              fontWeight: 600,
+                              cursor: "not-allowed",
+                            }}
+                          >
+                            Tạm hết
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/product/${p.id}`}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              background: isHovered ? C.primaryHover : C.primary,
+                              color: "#ffffff",
+                              padding: "8px 14px",
+                              borderRadius: "8px",
+                              fontSize: "13px",
+                              fontWeight: 600,
+                              textDecoration: "none",
+                              transform: isHovered ? "scale(1.04)" : "scale(1)",
+                              boxShadow: isHovered
+                                ? "0 4px 12px rgba(40, 84, 70, 0.25)"
+                                : "none",
+                              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                            }}
+                          >
+                            <span>Chọn món</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <line
+                                x1="12"
+                                y1="5"
+                                x2="12"
+                                y2="19"
+                                stroke="#ffffff"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              />
+                              <line
+                                x1="5"
+                                y1="12"
+                                x2="19"
+                                y2="12"
+                                stroke="#ffffff"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>

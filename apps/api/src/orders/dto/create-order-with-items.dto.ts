@@ -15,8 +15,9 @@ export class OrderItemDto {
   @IsPositive()
   productId: number;
 
+  @IsOptional()
   @IsString()
-  sizeCode: string;
+  sizeCode?: string;
 
   @IsOptional()
   @IsInt()
@@ -26,13 +27,15 @@ export class OrderItemDto {
   @IsPositive()
   qty: number;
 
+  @IsOptional()
   @IsNumber()
   @IsPositive()
-  unitPrice: number;
+  unitPrice?: number;
 
+  @IsOptional()
   @IsNumber()
   @IsPositive()
-  lineTotal: number;
+  lineTotal?: number;
 
   @IsOptional()
   @IsArray()
