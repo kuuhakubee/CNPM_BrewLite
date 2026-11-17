@@ -13,45 +13,66 @@ import { paymentService } from '../../services/paymentService';
 export default function PaymentView() {
   const router = useRouter();
   const { user, token } = useAuth();
-  const { cartItems, itemCount, totalAmount, clearCart } = useCart();
+  const { cartItems, itemCount, totalAmount, clearCart, isLoaded } = useCart();
   const { markPaymentComplete, isCartCompleted, isAccountCompleted } =
     useCheckout();
 
-  useEffect(() => {
-    if (!isCartCompleted) {
-      alert('Giỏ hàng của bạn đang trống. Vui lòng chọn món trước.');
-      router.push('/checkout/cart');
-      return;
-    }
-    if (!isAccountCompleted) {
-      alert('Vui lòng đăng nhập hoặc tạo tài khoản trước khi thanh toán.');
-      router.push('/checkout/account');
-      return;
-    }
-  }, [isCartCompleted, isAccountCompleted, router]);
-
-  // Form states — lấy từ tài khoản đăng nhập nếu có, không thì để trống
+  
+  // Form states — lấy từ tài khoản đăng nhập nếu có
   const [fullName, setFullName] = useState(user?.name || user?.fullName || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [email, setEmail] = useState(user?.email || '');
 
+  // Các state khác
+  const [store, setStore] = useState('BrewLite Nguyễn Huệ · Quận 1');
+  const [note, setNote] = useState('');
+
+  // Phương thức thanh toán
+  const [paymentMethod, setPaymentMethod] = useState('VNPAY');
+
+  // Trạng thái thanh toán
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showFailedNotice, setShowFailedNotice] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Kiểm tra giỏ hàng: dùng isCartCompleted, cartItems hoặc trực tiếp kiểm tra localStorage
+  const hasValidCart =
+    isCartCompleted ||
+    (cartItems && cartItems.length > 0) ||
+    itemCount > 0 ||
+    (typeof window !== 'undefined' &&
+      (() => {
+        try {
+          return JSON.parse(localStorage.getItem('brewlite_cart') || '[]').length > 0;
+        } catch {
+          return false;
+        }
+      })());
+
+  // Kiểm tra các bước checkout
+  useEffect(() => {
+    if (!isLoaded || isSubmitting) return;
+
+    if (!hasValidCart) {
+      router.replace('/checkout/cart');
+      return;
+    }
+
+    if (!isAccountCompleted) {
+      router.replace('/checkout/account');
+      return;
+    }
+  }, [hasValidCart, isAccountCompleted, isSubmitting, isLoaded, router]);
+
+  // Cập nhật thông tin người dùng
   useEffect(() => {
     if (user) {
       if (!fullName) setFullName(user.name || user.fullName || '');
       if (!phone && user.phone) setPhone(user.phone);
       if (!email && user.email) setEmail(user.email);
     }
-  }, [user]);
+  }, [user, fullName, phone, email]);
 
-  const [store, setStore] = useState('BrewLite Nguyễn Huệ · Quận 1');
-  const [note, setNote] = useState('');
-  /**
-   * paymentMethod: 'VNPAY' (Cổng thanh toán VNPay Sandbox) | 'WALLET' (Ví điện tử MoMo Sandbox)
-   */
-  const [paymentMethod, setPaymentMethod] = useState('VNPAY');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showFailedNotice, setShowFailedNotice] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
 
   const formatPrice = (val) =>
     new Intl.NumberFormat('vi-VN').format(val) + ' VNĐ';
@@ -81,19 +102,55 @@ export default function PaymentView() {
       let orderCode = null;
 
       // ── Bước 1: Tạo đơn hàng PENDING ──────────────────────────────────────
+      const idempotencyKey = paymentService.getOrCreateIdempotencyKey();
       try {
         if (activeToken && !activeToken.startsWith('mock-jwt-token-')) {
-          const orderResult = await orderService.createOrder(
-            {
-              subtotal: totalAmount,
-              total: totalAmount,
-              discount: 0,
-            },
-            activeToken,
-          );
-          if (orderResult?.order?.id) {
-            orderId = orderResult.order.id;
-            orderCode = orderResult.order.code || `#${orderId}`;
+          const itemsPayload = (cartItems || [])
+            .map((item) => {
+              const pid = parseInt(item.id, 10);
+              if (isNaN(pid) || pid <= 0) return null;
+              const unitPrice = Number(item.unitPrice || item.price) || 0;
+              const qty = Number(item.quantity) || 1;
+              return {
+                productId: pid,
+                sizeCode: String(item.size || 'M').toUpperCase(),
+                qty,
+                unitPrice,
+                lineTotal: unitPrice * qty,
+              };
+            })
+            .filter(Boolean);
+
+          try {
+            const orderResult = await orderService.createOrder(
+              {
+                subtotal: totalAmount,
+                total: totalAmount,
+                discount: 0,
+                ...(itemsPayload.length > 0 ? { items: itemsPayload } : {}),
+              },
+              activeToken,
+              idempotencyKey,
+            );
+            if (orderResult?.order?.id) {
+              orderId = orderResult.order.id;
+              orderCode = orderResult.order.code || `#${orderId}`;
+            }
+          } catch (itemErr) {
+            console.warn('Tạo đơn kèm items thất bại, thử tạo đơn cơ bản:', itemErr?.message);
+            const fallbackResult = await orderService.createOrder(
+              {
+                subtotal: totalAmount,
+                total: totalAmount,
+                discount: 0,
+              },
+              activeToken,
+              idempotencyKey,
+            );
+            if (fallbackResult?.order?.id) {
+              orderId = fallbackResult.order.id;
+              orderCode = fallbackResult.order.code || `#${orderId}`;
+            }
           }
         }
       } catch (orderErr) {
@@ -140,16 +197,13 @@ export default function PaymentView() {
           throw new Error('Cổng VNPay không trả về liên kết thanh toán.');
         }
 
-        // Xóa giỏ hàng trước khi chuyển sang VNPay
-        clearCart();
-
+        
         // ── Bước 3: Chuyển hướng người dùng sang Cổng VNPay Sandbox ─────────
         window.location.href = vnpayRes.paymentUrl;
         return;
       }
 
       // Phương thức Mock dự phòng (nếu chọn Ví MoMo)
-      const idempotencyKey = paymentService.getOrCreateIdempotencyKey();
       const payResult = await paymentService.pay(
         {
           orderId,
@@ -175,6 +229,19 @@ export default function PaymentView() {
       orderInfo.orderStatus = 'PAID';
       orderInfo.transactionRef = payResult.payment?.transactionRef;
       sessionStorage.setItem('brewlite_last_order', JSON.stringify(orderInfo));
+      try {
+        const existingStr = localStorage.getItem('brewlite_orders');
+        const existing = existingStr ? JSON.parse(existingStr) : [];
+        const filtered = existing.filter(
+          (o) =>
+            o.code !== orderInfo.code &&
+            String(o.orderId || o.id) !== String(orderId),
+        );
+        localStorage.setItem(
+          'brewlite_orders',
+          JSON.stringify([orderInfo, ...filtered]),
+        );
+      } catch {}
       clearCart();
       router.push('/checkout/confirmation');
     } catch (err) {
@@ -324,10 +391,10 @@ export default function PaymentView() {
                   </div>
                   <div>
                     <div className={styles.methodName}>
-                      Cổng VNPay Sandbox ⭐
+                      Cổng VNPay Sandbox
                     </div>
                     <div className={styles.methodDesc}>
-                      Thẻ test NCB · Quét mã QR VietQR · OTP 123456
+                      Môi trường thử nghiệm
                     </div>
                   </div>
                 </div>
@@ -359,16 +426,6 @@ export default function PaymentView() {
                   {paymentMethod === 'WALLET' && <div className={styles.radioDot} />}
                 </div>
               </div>
-            </div>
-
-            <div className={styles.paymentFootnote} style={{ marginTop: '14px', lineHeight: '1.5' }}>
-              💡 <strong>Thông tin thẻ test VNPay Sandbox</strong>:
-              <br />
-              • Ngân hàng: <strong>NCB</strong> | Số thẻ: <code>9704198526191432198</code>
-              <br />
-              • Tên chủ thẻ: <code>NGUYEN VAN A</code> | Ngày phát hành: <code>07/15</code>
-              <br />
-              • Mật khẩu OTP: <code>123456</code> (Tuyệt đối không dùng thẻ/tiền thật)
             </div>
           </div>
         </div>
@@ -477,7 +534,7 @@ export default function PaymentView() {
           </button>
 
           <p className={styles.partnerNotice}>
-            Hệ thống sẽ chuyển bạn sang Cổng thanh toán VNPay Sandbox. Trạng thái chỉ chuyển sang PAID sau khi VNPay gửi Webhook/IPN xác nhận.
+            Hệ thống sẽ chuyển bạn sang Cổng thanh toán VNPay Sandbox.
           </p>
 
           <div className={styles.securityBadge}>

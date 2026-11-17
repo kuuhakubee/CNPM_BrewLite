@@ -28,7 +28,17 @@ export function CheckoutProvider({ children }) {
   const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   // Kiểm tra trạng thái hoàn thành
-  const isCartCompleted = itemCount > 0;
+  const isCartCompleted =
+    itemCount > 0 ||
+    (cartItems && cartItems.length > 0) ||
+    (typeof window !== 'undefined' &&
+      (() => {
+        try {
+          return JSON.parse(localStorage.getItem('brewlite_cart') || '[]').length > 0;
+        } catch {
+          return false;
+        }
+      })());
   const isAccountCompleted = Boolean(user);
 
   // Thanh stepper từ 1 đến 4 CHỈ HIỆN khi người dùng đăng nhập thành công
