@@ -35,11 +35,15 @@ export class AuthService {
       data: {
         email: dto.email.toLowerCase(),
         passwordHash,
+        userName: dto.userName ?? null,
+        phoneNumber: dto.phoneNumber ?? null,
         role: 'CUSTOMER',
       },
       select: {
         id: true,
         email: true,
+        userName: true,
+        phoneNumber: true,
         role: true,
         loyaltyPoints: true,
         createdAt: true,

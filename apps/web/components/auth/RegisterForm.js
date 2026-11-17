@@ -156,8 +156,8 @@ export default function RegisterForm({ onSwitchToLogin, onSuccess }) {
 
     try {
       await register({
-        fullName: fullName.trim(),
-        phone: phone.trim(),
+        userName: fullName.trim(),
+        phoneNumber: phone.trim(),
         email: email.trim(),
         password,
       });

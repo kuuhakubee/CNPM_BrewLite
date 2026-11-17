@@ -59,8 +59,8 @@ export function AuthProvider({ children }) {
         const userObj = {
           id: res.user?.id,
           email: res.user?.email || userData.email,
-          name: userData.fullName || res.user?.name || userData.email.split('@')[0],
-          phone: userData.phone || '',
+          name: res.user?.userName || userData.userName || userData.email.split('@')[0],
+          phoneNumber: res.user?.phoneNumber || userData.phoneNumber || '',
           role: res.user?.role || 'CUSTOMER',
           loyaltyPoints: res.user?.loyaltyPoints || 0,
         };
