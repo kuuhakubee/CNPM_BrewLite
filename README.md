@@ -1,8 +1,7 @@
-# BrewLite – README
+# BrewLite
 
 > **BrewLite** is a coffee-ordering application built with NestJS (backend) + Next.js (frontend),
-> PostgreSQL (database), and Docker (containerisation). This README guides you through setting
-> up the project locally, verifying the database, and running the system end-to-end.
+> PostgreSQL (database), and Docker (containerisation).
 
 ---
 
