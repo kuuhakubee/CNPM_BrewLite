@@ -7,7 +7,7 @@
  * Idempotent (AC-16-3): chạy lại nhiều lần KHÔNG sinh dữ liệu trùng
  * nhờ upsert theo khóa unique (email, code, productId+code...).
  */
-import { PrismaClient, DiscountType, Ingredient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -129,7 +129,7 @@ async function main() {
     { name: 'Cam', unit: 'quả', stock: 50 },
   ];
 
-  const ingredients: Ingredient[] = [];
+  const ingredients: any[] = [];
   for (const def of ingredientDefs) {
     const ingredient = await prisma.ingredient.upsert({
       where: { name: def.name },
@@ -208,7 +208,7 @@ async function main() {
     create: {
       code: 'WELCOME10',
       description: 'Giảm 10% cho khách mới',
-      discountType: DiscountType.PERCENT,
+      discountType: 'PERCENT',
       discountValue: 10,
       minOrderTotal: 0,
       usedCount: 0,

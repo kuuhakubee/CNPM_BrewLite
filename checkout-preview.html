@@ -1016,28 +1016,16 @@
           </div>
 
           <div class="payment-options-grid">
-            <!-- MoMo Active -->
-            <div id="optMomo" class="payment-option-card active" onclick="selectPayment('momo')">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-                <div>
-                  <div style="font-size:14.5px; font-weight:700;">Ví điện tử</div>
-                  <div style="font-size:12px; color:#768078;">MoMo · Môi trường thử nghiệm</div>
-                </div>
-              </div>
-              <div class="radio-circle-box"><div class="radio-dot-inner"></div></div>
-            </div>
-
-            <!-- Card Inactive -->
-            <div id="optCard" class="payment-option-card" onclick="selectPayment('card')">
+            <!-- Cổng VNPay / Thẻ ngân hàng Active -->
+            <div id="optCard" class="payment-option-card active" onclick="selectPayment('card')">
               <div style="display:flex; align-items:center; gap:12px;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
                 <div>
-                  <div style="font-size:14.5px; font-weight:700;">Thẻ ngân hàng</div>
-                  <div style="font-size:12px; color:#768078;">Qua trang bảo mật của đối tác</div>
+                  <div style="font-size:14.5px; font-weight:700;">Cổng VNPay Sandbox</div>
+                  <div style="font-size:12px; color:#768078;">Thẻ ngân hàng / Ví VNPAY · Thử nghiệm</div>
                 </div>
               </div>
-              <div class="radio-circle-box"></div>
+              <div class="radio-circle-box"><div class="radio-dot-inner"></div></div>
             </div>
           </div>
 
@@ -1329,22 +1317,14 @@
     }
 
     function selectPayment(type) {
-      const momo = document.getElementById('optMomo');
       const card = document.getElementById('optCard');
       const confirmMethod = document.getElementById('confirmMethod');
-      if (type === 'momo') {
-        momo.classList.add('active');
-        momo.querySelector('.radio-circle-box').innerHTML = '<div class="radio-dot-inner"></div>';
-        card.classList.remove('active');
-        card.querySelector('.radio-circle-box').innerHTML = '';
-        if (confirmMethod) confirmMethod.textContent = 'Ví MoMo · Sandbox';
-      } else {
+      if (card) {
         card.classList.add('active');
-        card.querySelector('.radio-circle-box').innerHTML = '<div class="radio-dot-inner"></div>';
-        momo.classList.remove('active');
-        momo.querySelector('.radio-circle-box').innerHTML = '';
-        if (confirmMethod) confirmMethod.textContent = 'Thẻ ngân hàng';
+        const circle = card.querySelector('.radio-circle-box');
+        if (circle) circle.innerHTML = '<div class="radio-dot-inner"></div>';
       }
+      if (confirmMethod) confirmMethod.textContent = 'Cổng VNPay Sandbox';
     }
 
     function adjustQty(btn, delta, price) {
