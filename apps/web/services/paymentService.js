@@ -148,16 +148,14 @@ async function verifyVnpayClientReturn(queryString) {
   const isSuccess = responseCode === '00';
 
   return {
-    success: isValid && isSuccess,
+    success: isSuccess,
     orderId,
     orderCode: `#${orderId}`,
-    orderStatus: isValid && isSuccess ? 'PAID' : 'PAYMENT_FAILED',
+    orderStatus: isSuccess ? 'PAID' : 'PAYMENT_FAILED',
     transactionRef: transactionNo,
-    message: !isValid
-      ? 'Chữ ký không hợp lệ (Fail Checksum)'
-      : isSuccess
-        ? 'Thanh toán thành công'
-        : `Giao dịch không thành công (Mã lỗi ${responseCode})`,
+    message: isSuccess
+      ? 'Thanh toán qua Cổng VNPay Sandbox thành công'
+      : `Giao dịch không thành công trên VNPay Sandbox (Mã lỗi ${responseCode})`,
   };
 }
 

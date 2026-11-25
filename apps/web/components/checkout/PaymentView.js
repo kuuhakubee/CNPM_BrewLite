@@ -167,69 +167,45 @@ export default function PaymentView() {
       const pad = (n) => String(n).padStart(2, '0');
       const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} · ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
+      const formattedItems = cartItems.map((item) => {
+        const itemPrice = Number(item.price) || 0;
+        const itemQty = Number(item.quantity) || 1;
+        const specsParts = [];
+        if (item.size) specsParts.push(`Size ${item.size}`);
+        if (item.sweetness) specsParts.push(item.sweetness);
+        if (item.ice) specsParts.push(item.ice);
+        if (item.toppings) specsParts.push(item.toppings);
+
+        return {
+          id: item.id,
+          name: item.name,
+          image: item.image,
+          size: item.size || 'M',
+          specs: specsParts.length > 0 ? specsParts.join(' · ') : 'Size tiêu chuẩn',
+          quantity: itemQty,
+          unitPrice: itemPrice,
+          qtyPrice: `${itemQty} × ${formatPrice(itemPrice)}`,
+          total: formatPrice(itemPrice * itemQty),
+        };
+      });
+
       const orderInfo = {
         code: orderCode,
         orderId,
         total: formatPrice(totalAmount),
+        subtotal: formatPrice(totalAmount),
         itemCount,
-        items: cartItems,
-        method:
-          paymentMethod === 'VNPAY'
-            ? 'Cổng VNPay Sandbox'
-            : 'Ví điện tử · MoMo Sandbox',
+        items: formattedItems,
+        method: 'Cổng VNPay Sandbox',
         date: dateStr,
         customerName: fullName,
         customerPhone: phone,
         orderStatus: 'PENDING',
       };
-      sessionStorage.setItem('brewlite_last_order', JSON.stringify(orderInfo));
 
-      // ── Bước 2: Gọi Cổng thanh toán VNPay Sandbox ─────────────────────────
-      if (paymentMethod === 'VNPAY') {
-        const vnpayRes = await paymentService.createVnpayUrl(
-          orderId,
-          activeToken,
-          '',
-          totalAmount,
-        );
-
-        if (!vnpayRes?.paymentUrl) {
-          throw new Error('Cổng VNPay không trả về liên kết thanh toán.');
-        }
-
-        
-        // ── Bước 3: Chuyển hướng người dùng sang Cổng VNPay Sandbox ─────────
-        window.location.href = vnpayRes.paymentUrl;
-        return;
-      }
-
-      // Phương thức Mock dự phòng (nếu chọn Ví MoMo)
-      const payResult = await paymentService.pay(
-        {
-          orderId,
-          amount: totalAmount,
-          method: 'WALLET',
-          idempotencyKey,
-        },
-        activeToken,
-      );
-
-      if (payResult.orderStatus === 'PAYMENT_FAILED') {
-        paymentService.resetPaymentKey();
-        setShowFailedNotice(true);
-        setErrorMessage(
-          'Giao dịch bị từ chối bởi cổng thanh toán. Giỏ hàng được giữ nguyên. Bạn có thể thử lại.',
-        );
-        setIsSubmitting(false);
-        return;
-      }
-
-      paymentService.resetPaymentKey();
-      markPaymentComplete();
-      orderInfo.orderStatus = 'PAID';
-      orderInfo.transactionRef = payResult.payment?.transactionRef;
-      sessionStorage.setItem('brewlite_last_order', JSON.stringify(orderInfo));
       try {
+        sessionStorage.setItem('brewlite_last_order', JSON.stringify(orderInfo));
+        localStorage.setItem('brewlite_last_order', JSON.stringify(orderInfo));
         const existingStr = localStorage.getItem('brewlite_orders');
         const existing = existingStr ? JSON.parse(existingStr) : [];
         const filtered = existing.filter(
@@ -241,9 +217,25 @@ export default function PaymentView() {
           'brewlite_orders',
           JSON.stringify([orderInfo, ...filtered]),
         );
-      } catch {}
-      clearCart();
-      router.push('/checkout/confirmation');
+      } catch (storageErr) {
+        console.warn('Lỗi lưu orderInfo vào storage:', storageErr);
+      }
+
+      // ── Bước 2: Gọi Cổng thanh toán VNPay Sandbox ─────────────────────────
+      const vnpayRes = await paymentService.createVnpayUrl(
+        orderId,
+        activeToken,
+        '',
+        totalAmount,
+      );
+
+      if (!vnpayRes?.paymentUrl) {
+        throw new Error('Cổng VNPay không trả về liên kết thanh toán.');
+      }
+
+      // ── Bước 3: Chuyển hướng người dùng sang Cổng VNPay Sandbox ─────────
+      window.location.href = vnpayRes.paymentUrl;
+      return;
     } catch (err) {
       setShowFailedNotice(true);
       setErrorMessage(
@@ -401,29 +393,6 @@ export default function PaymentView() {
 
                 <div className={`${styles.radioIndicator} ${paymentMethod === 'VNPAY' ? styles.radioIndicatorActive : ''}`}>
                   {paymentMethod === 'VNPAY' && <div className={styles.radioDot} />}
-                </div>
-              </div>
-
-              {/* Option 2: MoMo Sandbox */}
-              <div
-                className={`${styles.paymentRadioCard} ${paymentMethod === 'WALLET' ? styles.paymentCardActive : ''}`}
-                onClick={() => setPaymentMethod('WALLET')}
-              >
-                <div className={styles.methodLeft}>
-                  <div className={styles.methodIconBox}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                      <line x1="12" y1="18" x2="12.01" y2="18" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className={styles.methodName}>Ví điện tử MoMo Sandbox</div>
-                    <div className={styles.methodDesc}>Môi trường thử nghiệm</div>
-                  </div>
-                </div>
-
-                <div className={`${styles.radioIndicator} ${paymentMethod === 'WALLET' ? styles.radioIndicatorActive : ''}`}>
-                  {paymentMethod === 'WALLET' && <div className={styles.radioDot} />}
                 </div>
               </div>
             </div>

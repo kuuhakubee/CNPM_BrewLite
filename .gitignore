@@ -71,3 +71,17 @@ FE_Design/
 *.synctex.gz
 docs/
 docs2/
+
+# Chặn thư mục báo cáo nếu có tạo lại
+Assigment_template_SGU/
+
+# Chặn các thư mục cấu hình AI assistants
+.agents/
+.claude/
+.cursor/
+.devin/
+
+# Chặn file chạy script local & môi trường
+*.bat
+.env
+node_modules/

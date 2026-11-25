@@ -126,8 +126,18 @@ export class PaymentsService {
     try {
       assertTransition(order.status, newOrderStatus);
 
-      await this.prisma.$transaction([
-        this.prisma.payment.create({
+      await this.prisma.$transaction(async (tx) => {
+        const updateRes = await tx.order.updateMany({
+          where: { id: order.id, status: 'PENDING' },
+          data: { status: newOrderStatus },
+        });
+
+        // Nếu count == 0 tức là IPN hoặc ReturnUrl đã xử lý đơn này rồi
+        if (updateRes.count === 0) {
+          return;
+        }
+
+        await tx.payment.create({
           data: {
             orderId: order.id,
             idempotencyKey,
@@ -139,20 +149,17 @@ export class PaymentsService {
               ? null
               : `VNPAY_ERR_${query.vnp_ResponseCode}`,
           },
-        }),
-        this.prisma.order.update({
-          where: { id: order.id },
-          data: { status: newOrderStatus },
-        }),
-        this.prisma.orderStatusHistory.create({
+        });
+
+        await tx.orderStatusHistory.create({
           data: {
             orderId: order.id,
             fromStatus: order.status,
             toStatus: newOrderStatus,
             actorId: null, // Hệ thống cập nhật qua Webhook
           },
-        }),
-      ]);
+        });
+      });
 
       // ── 4. Loyalty: Cộng điểm sau khi PAID ───────────────────────────
       if (isSuccess) {
@@ -233,8 +240,18 @@ export class PaymentsService {
       const idempotencyKey = `vnp_${query.vnp_TransactionNo || txnRef}`;
 
       try {
-        await this.prisma.$transaction([
-          this.prisma.payment.create({
+        await this.prisma.$transaction(async (tx) => {
+          const updateRes = await tx.order.updateMany({
+            where: { id: order.id, status: 'PENDING' },
+            data: { status: newOrderStatus },
+          });
+
+          // Nếu count == 0 tức là IPN đã hoàn thành trước, không chèn trùng Payment
+          if (updateRes.count === 0) {
+            return;
+          }
+
+          await tx.payment.create({
             data: {
               orderId: order.id,
               idempotencyKey,
@@ -246,20 +263,17 @@ export class PaymentsService {
                 ? null
                 : `VNPAY_ERR_${query.vnp_ResponseCode}`,
             },
-          }),
-          this.prisma.order.update({
-            where: { id: order.id },
-            data: { status: newOrderStatus },
-          }),
-          this.prisma.orderStatusHistory.create({
+          });
+
+          await tx.orderStatusHistory.create({
             data: {
               orderId: order.id,
               fromStatus: order.status,
               toStatus: newOrderStatus,
               actorId: order.userId,
             },
-          }),
-        ]);
+          });
+        });
         return {
           success: isSuccess,
           orderId: order.id,
@@ -294,6 +308,7 @@ export class PaymentsService {
    * Phương thức processPayment cũ (giữ cho backward-compatibility & unit test)
    */
   async processPayment(userId: number, dto: CreatePaymentDto) {
+    // 1. Kiểm tra xem idempotencyKey đã từng được sử dụng chưa
     const existing = await this.prisma.payment.findUnique({
       where: { idempotencyKey: dto.idempotencyKey },
       include: { order: true },
@@ -304,6 +319,23 @@ export class PaymentsService {
         payment: existing,
         order: existing.order,
         orderStatus: existing.order.status,
+      };
+    }
+
+    // 2. Chống thanh toán trùng: Kiểm tra xem đơn này đã có giao dịch SUCCESS chưa
+    const existingPaid = await this.prisma.payment.findFirst({
+      where: {
+        orderId: dto.orderId,
+        status: 'SUCCESS',
+      },
+      include: { order: true },
+    });
+    if (existingPaid) {
+      return {
+        idempotent: true,
+        payment: existingPaid,
+        order: existingPaid.order,
+        orderStatus: existingPaid.order.status,
       };
     }
 
@@ -318,11 +350,12 @@ export class PaymentsService {
     }
 
     if (order.status !== 'PENDING') {
-      throw new BadRequestException(
-        `Đơn hàng đang ở trạng thái ${order.status}, không thể thanh toán.`,
+      throw new ConflictException(
+        `Đơn hàng đang ở trạng thái ${order.status}, không thể thực hiện thanh toán tiếp.`,
       );
     }
 
+    // 3. Gọi cổng thanh toán (Mock Gateway)
     const gatewayResult = await this.mockGateway.charge({
       orderId: dto.orderId,
       amount: dto.amount,
@@ -342,9 +375,26 @@ export class PaymentsService {
     let payment: Payment;
     let updatedOrder: Order;
 
+    // 4. Khóa trạng thái nguyên tử (Atomic State Lock) trong transaction chống race-condition
     try {
-      const [newPayment, newOrder] = await this.prisma.$transaction([
-        this.prisma.payment.create({
+      const result = await this.prisma.$transaction(async (tx) => {
+        // Chỉ cập nhật nếu trạng thái hiện tại trong DB VẪN ĐANG LÀ PENDING
+        const updateRes = await tx.order.updateMany({
+          where: {
+            id: dto.orderId,
+            status: 'PENDING',
+          },
+          data: { status: newOrderStatus },
+        });
+
+        if (updateRes.count === 0) {
+          // Tranh chấp đồng thời: một request khác đã đổi trạng thái đơn hàng này
+          throw new ConflictException(
+            'Đơn hàng đã được thanh toán hoặc đang được xử lý đồng thời bởi một yêu cầu khác.',
+          );
+        }
+
+        const newPayment = await tx.payment.create({
           data: {
             orderId: dto.orderId,
             idempotencyKey: dto.idempotencyKey,
@@ -354,22 +404,26 @@ export class PaymentsService {
             transactionRef: gatewayResult.transactionRef ?? null,
             failureReason: gatewayResult.failureReason ?? null,
           },
-        }),
-        this.prisma.order.update({
-          where: { id: dto.orderId },
-          data: { status: newOrderStatus },
-        }),
-        this.prisma.orderStatusHistory.create({
+        });
+
+        await tx.orderStatusHistory.create({
           data: {
             orderId: dto.orderId,
             fromStatus: order.status,
             toStatus: newOrderStatus,
             actorId: userId,
           },
-        }),
-      ]);
-      payment = newPayment;
-      updatedOrder = newOrder;
+        });
+
+        const latestOrder = await tx.order.findUniqueOrThrow({
+          where: { id: dto.orderId },
+        });
+
+        return { newPayment, latestOrder };
+      });
+
+      payment = result.newPayment;
+      updatedOrder = result.latestOrder;
     } catch (err: any) {
       if (err?.code === 'P2002') {
         const found = await this.prisma.payment.findUnique({

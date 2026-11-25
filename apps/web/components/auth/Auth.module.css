@@ -296,16 +296,6 @@
   flex-shrink: 0;
 }
 
-.forgotLink {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #1e382b;
-  text-decoration: none;
-}
-
-.forgotLink:hover {
-  text-decoration: underline;
-}
 
 .primaryButton {
   background-color: #1e382b;
