@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './ConfirmationView.module.css';
@@ -13,15 +13,16 @@ export default function ConfirmationView() {
   const router = useRouter();
   const { paymentCompleted, markPaymentComplete } = useCheckout();
   const { cartItems, clearCart, restoreCart } = useCart();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifyNotice, setVerifyNotice] = useState('');
+  const processedRef = useRef(false);
 
   const [order, setOrder] = useState({
     code: '#BL-1027',
     total: '175.000 VNĐ',
     subtotal: '175.000 VNĐ',
-    method: 'VNPay Sandbox',
+    method: 'Cổng VNPay Sandbox',
     date: '27/10/2026 · 09:41',
     customerName: 'Khách hàng BrewLite',
     customerPhone: '0901 234 567',
@@ -41,199 +42,204 @@ export default function ConfirmationView() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (processedRef.current) return;
 
     const searchParams = window.location.search;
     const isVnpayReturn = searchParams.includes('vnp_ResponseCode');
 
     // Trường hợp 1: Người dùng vừa được redirect từ Cổng VNPay Sandbox
     if (isVnpayReturn) {
+      processedRef.current = true;
       setIsVerifying(true);
-      setVerifyNotice('Đang kiểm tra chữ ký số HMAC-SHA512 từ VNPay...');
+      setVerifyNotice('Đang đồng bộ và xác thực dữ liệu giao dịch từ Cổng VNPay...');
 
       const urlParams = new URLSearchParams(searchParams);
       const vnpResponseCode = urlParams.get('vnp_ResponseCode');
       const isVnpayCodeSuccess = vnpResponseCode === '00';
 
+      // 1. Trích xuất trực tiếp số tiền từ VNPay (vnp_Amount đơn vị x100)
+      const vnpAmount = urlParams.get('vnp_Amount');
+      const rawVnpAmount = vnpAmount ? Number(vnpAmount) / 100 : null;
+      const formattedVnpAmount = rawVnpAmount
+        ? new Intl.NumberFormat('vi-VN').format(rawVnpAmount) + ' VNĐ'
+        : null;
+
+      // 2. Trích xuất ngày thanh toán từ VNPay (định dạng YYYYMMDDHHmmss)
+      const vnpPayDate = urlParams.get('vnp_PayDate');
+      let formattedPayDate = null;
+      if (vnpPayDate && vnpPayDate.length === 14) {
+        const y = vnpPayDate.slice(0, 4);
+        const m = vnpPayDate.slice(4, 6);
+        const d = vnpPayDate.slice(6, 8);
+        const hh = vnpPayDate.slice(8, 10);
+        const mm = vnpPayDate.slice(10, 12);
+        formattedPayDate = `${d}/${m}/${y} · ${hh}:${mm}`;
+      } else {
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        formattedPayDate = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} · ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      }
+
+      // 3. Trích xuất ngân hàng / loại thẻ
+      const vnpBankCode = urlParams.get('vnp_BankCode');
+      const vnpCardType = urlParams.get('vnp_CardType');
+      const formattedMethod = vnpBankCode
+        ? `Cổng VNPay Sandbox (${vnpBankCode}${vnpCardType ? ` - ${vnpCardType}` : ''})`
+        : 'Cổng VNPay Sandbox';
+
+      const vnpTransactionNo = urlParams.get('vnp_TransactionNo');
+      const vnpTxnRef = urlParams.get('vnp_TxnRef');
+      const parsedOrderIdFromTxn = vnpTxnRef ? vnpTxnRef.split('_')[0] : null;
+
+      // 4. Đọc thông tin đơn hàng đã lưu trước khi sang VNPay (ưu tiên localStorage)
+      let parsed = {};
+      try {
+        const stored =
+          localStorage.getItem('brewlite_last_order') ||
+          sessionStorage.getItem('brewlite_last_order');
+        if (stored) {
+          parsed = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.warn('Lỗi đọc brewlite_last_order:', e);
+      }
+
+      const resolvedOrderId = parsed.orderId || parsedOrderIdFromTxn || 'VNPay';
+      const resolvedOrderCode =
+        parsed.code || (resolvedOrderId ? `#BL-${resolvedOrderId}` : '#BL-VNPay');
+      const resolvedCustomerName =
+        parsed.customerName || user?.name || user?.fullName || 'Khách hàng BrewLite';
+      const resolvedCustomerPhone =
+        parsed.customerPhone || user?.phone || '0901 234 567';
+
+      // 5. CẬP NHẬT NGAY LẬP TỨC dữ liệu đơn hàng vào state (không đợi backend)
+      if (isVnpayCodeSuccess) {
+        markPaymentComplete();
+        clearCart();
+
+        const successOrder = {
+          code: resolvedOrderCode,
+          orderId: resolvedOrderId,
+          total: formattedVnpAmount || parsed.total || '175.000 VNĐ',
+          subtotal: formattedVnpAmount || parsed.subtotal || parsed.total || '175.000 VNĐ',
+          date: formattedPayDate || parsed.date,
+          method: formattedMethod,
+          orderStatus: 'PAID',
+          transactionRef: vnpTransactionNo || 'VNPAY-VERIFIED',
+          customerName: resolvedCustomerName,
+          customerPhone: resolvedCustomerPhone,
+          items:
+            parsed.items && parsed.items.length > 0
+              ? parsed.items
+              : [
+                  {
+                    id: 1,
+                    name: 'Đơn hàng cà phê BrewLite',
+                    specs: `Thanh toán qua ${vnpBankCode || 'VNPay Sandbox'} · Mã GD: ${vnpTransactionNo || 'TC'}`,
+                    qtyPrice: `1 × ${formattedVnpAmount || 'Đã thanh toán'}`,
+                    total: formattedVnpAmount || 'Đã thanh toán',
+                    image: '/images/latte-yen-mach.png',
+                  },
+                ],
+        };
+
+        setOrder(successOrder);
+        setVerifyNotice(
+          `Giao dịch thanh toán ${formattedVnpAmount || ''} qua VNPay Sandbox đã hoàn tất thành công (Mã GD: ${vnpTransactionNo || 'VNPAY'}).`,
+        );
+
+        // Lưu đồng bộ vào cả sessionStorage và localStorage cho trang Lịch sử đơn
+        try {
+          sessionStorage.setItem('brewlite_last_order', JSON.stringify(successOrder));
+          localStorage.setItem('brewlite_last_order', JSON.stringify(successOrder));
+
+          const existingStr = localStorage.getItem('brewlite_orders');
+          const existing = existingStr ? JSON.parse(existingStr) : [];
+          const filtered = existing.filter(
+            (o) =>
+              o.code !== successOrder.code &&
+              String(o.orderId || o.id) !== String(resolvedOrderId),
+          );
+          localStorage.setItem(
+            'brewlite_orders',
+            JSON.stringify([successOrder, ...filtered]),
+          );
+        } catch (storageErr) {
+          console.warn('Lỗi lưu đơn hàng vào storage:', storageErr);
+        }
+      } else {
+        setVerifyNotice(
+          `Giao dịch chưa hoàn tất hoặc bị huỷ trên Cổng VNPay Sandbox (Mã lỗi: ${vnpResponseCode}). Giỏ hàng của bạn được giữ nguyên.`,
+        );
+        const failedOrder = {
+          code: resolvedOrderCode,
+          orderId: resolvedOrderId,
+          total: formattedVnpAmount || parsed.total || '0 VNĐ',
+          subtotal: formattedVnpAmount || parsed.subtotal || parsed.total || '0 VNĐ',
+          date: formattedPayDate || parsed.date,
+          method: formattedMethod,
+          orderStatus: 'PAYMENT_FAILED',
+          transactionRef: vnpTransactionNo || 'VNPAY-CANCELLED',
+          customerName: resolvedCustomerName,
+          customerPhone: resolvedCustomerPhone,
+          items: parsed.items || [],
+        };
+        setOrder(failedOrder);
+        if (parsed.items && parsed.items.length > 0) {
+          restoreCart(parsed.items);
+        }
+      }
+
+      // 6. Gửi xác thực bổ sung tới Backend để đồng bộ Database PostgreSQL
       paymentService
         .verifyVnpayReturn(searchParams)
         .then((result) => {
           setIsVerifying(false);
-          const stored = sessionStorage.getItem('brewlite_last_order');
-          let parsed = {};
-          if (stored) {
-            try {
-              parsed = JSON.parse(stored);
-            } catch {}
-          }
-
-          // Thành công khi backend hoặc client xác thực thành công HOẶC mã phản hồi từ VNPay là '00'
-          const isPaymentSuccess =
-            result.success ||
-            result.orderStatus === 'PAID' ||
-            isVnpayCodeSuccess;
-
-          if (isPaymentSuccess) {
-            markPaymentComplete();
-            clearCart();
-            setVerifyNotice(
-              result.message || 'Xác thực thanh toán qua Cổng VNPay Sandbox thành công!',
-            );
-            const resolvedOrderId =
-              result.orderId ||
-              parsed.orderId ||
-              urlParams.get('vnp_TxnRef')?.split('_')[0];
-            const resolvedOrderCode =
-              result.orderCode ||
-              parsed.code ||
-              (resolvedOrderId ? `#${resolvedOrderId}` : '#BL-VNPay');
-
-            setOrder((prev) => {
-              const finalOrder = {
-                ...prev,
-                ...parsed,
-                orderId: resolvedOrderId,
-                code: resolvedOrderCode,
-                orderStatus: 'PAID',
-                transactionRef:
-                  result.transactionRef ||
-                  urlParams.get('vnp_TransactionNo') ||
-                  'VNPAY-VERIFIED',
-                method: 'Cổng VNPay Sandbox',
-              };
-              sessionStorage.setItem('brewlite_last_order', JSON.stringify(finalOrder));
-              try {
-                const existingStr = localStorage.getItem('brewlite_orders');
-                const existing = existingStr ? JSON.parse(existingStr) : [];
-                const filtered = existing.filter(
-                  (o) =>
-                    o.code !== finalOrder.code &&
-                    String(o.orderId || o.id) !== String(resolvedOrderId),
-                );
-                localStorage.setItem(
-                  'brewlite_orders',
-                  JSON.stringify([finalOrder, ...filtered]),
-                );
-              } catch {}
-              return finalOrder;
-            });
-
-            // Đồng bộ trạng thái PAID lên backend nếu có token đăng nhập
-            const activeToken =
-              token ||
-              (typeof window !== 'undefined'
-                ? localStorage.getItem('brewlite_token')
-                : null);
-            if (activeToken && resolvedOrderId && !activeToken.startsWith('mock-')) {
-              const apiUrl =
-                process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-              fetch(`${apiUrl}/api/v1/orders/${resolvedOrderId}/status`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${activeToken}`,
-                },
-                body: JSON.stringify({ status: 'PAID' }),
-              }).catch(() => {});
-            }
-          } else {
-            setVerifyNotice(
-              result.message ||
-                `Giao dịch bị từ chối hoặc bị huỷ trên VNPay Sandbox (Mã lỗi ${vnpResponseCode}). Giỏ hàng của bạn vẫn được giữ nguyên.`,
-            );
-            setOrder((prev) => ({
-              ...prev,
-              ...parsed,
-              code: result.orderCode || prev.code,
-              orderStatus: 'PAYMENT_FAILED',
-              method: 'Cổng VNPay Sandbox',
-            }));
-            if (
-              parsed.items &&
-              parsed.items.length > 0 &&
-              (!cartItems || cartItems.length === 0)
-            ) {
-              restoreCart(parsed.items);
+          if (result && (result.success || result.orderStatus === 'PAID')) {
+            if (result.orderCode) {
+              setOrder((prev) => ({ ...prev, code: result.orderCode }));
             }
           }
         })
-        .catch((err) => {
+        .catch(() => {
           setIsVerifying(false);
-          if (isVnpayCodeSuccess) {
-            markPaymentComplete();
-            clearCart();
-            setVerifyNotice(
-              'Giao dịch VNPay thành công (Đã xác thực mã phản hồi 00 từ Cổng VNPay).',
-            );
-            const stored = sessionStorage.getItem('brewlite_last_order');
-            let parsed = {};
-            if (stored) {
-              try {
-                parsed = JSON.parse(stored);
-              } catch {}
-            }
-            const resolvedOrderId =
-              parsed.orderId || urlParams.get('vnp_TxnRef')?.split('_')[0];
-            const resolvedOrderCode =
-              parsed.code || (resolvedOrderId ? `#${resolvedOrderId}` : '#BL-VNPay');
-
-            setOrder((prev) => {
-              const finalOrder = {
-                ...prev,
-                ...parsed,
-                orderId: resolvedOrderId,
-                code: resolvedOrderCode,
-                orderStatus: 'PAID',
-                transactionRef:
-                  urlParams.get('vnp_TransactionNo') || 'VNPAY-VERIFIED',
-                method: 'Cổng VNPay Sandbox',
-              };
-              sessionStorage.setItem('brewlite_last_order', JSON.stringify(finalOrder));
-              try {
-                const existingStr = localStorage.getItem('brewlite_orders');
-                const existing = existingStr ? JSON.parse(existingStr) : [];
-                const filtered = existing.filter(
-                  (o) =>
-                    o.code !== finalOrder.code &&
-                    String(o.orderId || o.id) !== String(resolvedOrderId),
-                );
-                localStorage.setItem(
-                  'brewlite_orders',
-                  JSON.stringify([finalOrder, ...filtered]),
-                );
-              } catch {}
-              return finalOrder;
-            });
-
-            const activeToken =
-              token ||
-              (typeof window !== 'undefined'
-                ? localStorage.getItem('brewlite_token')
-                : null);
-            if (activeToken && resolvedOrderId && !activeToken.startsWith('mock-')) {
-              const apiUrl =
-                process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-              fetch(`${apiUrl}/api/v1/orders/${resolvedOrderId}/status`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${activeToken}`,
-                },
-                body: JSON.stringify({ status: 'PAID' }),
-              }).catch(() => {});
-            }
-          } else {
-            setVerifyNotice(err?.message || 'Lỗi khi xác thực với cổng VNPay');
-            setOrder((prev) => ({
-              ...prev,
-              orderStatus: 'PAYMENT_FAILED',
-            }));
+        })
+        .finally(() => {
+          setIsVerifying(false);
+          // Đồng bộ trạng thái PAID lên backend nếu có token đăng nhập
+          const activeToken =
+            token ||
+            (typeof window !== 'undefined'
+              ? localStorage.getItem('brewlite_token')
+              : null);
+          if (
+            isVnpayCodeSuccess &&
+            activeToken &&
+            resolvedOrderId &&
+            !isNaN(Number(resolvedOrderId)) &&
+            !activeToken.startsWith('mock-')
+          ) {
+            const apiUrl =
+              process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+            fetch(`${apiUrl}/api/v1/orders/${resolvedOrderId}/status`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${activeToken}`,
+              },
+              body: JSON.stringify({ status: 'PAID' }),
+            }).catch(() => {});
           }
         });
+
       return;
     }
 
-    // Trường hợp 2: Khách xem đơn bình thường từ sessionStorage
-    const stored = sessionStorage.getItem('brewlite_last_order');
+    // Trường hợp 2: Khách xem đơn bình thường từ storage (không có query params VNPay)
+    const stored =
+      localStorage.getItem('brewlite_last_order') ||
+      sessionStorage.getItem('brewlite_last_order');
+
     if (!stored && !paymentCompleted) {
       router.replace('/checkout/payment');
       return;
@@ -242,23 +248,35 @@ export default function ConfirmationView() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        setOrder((prev) => ({
-          ...prev,
-          code: parsed.code || prev.code,
-          total: parsed.total || prev.total,
-          subtotal: parsed.total || prev.subtotal,
-          method: parsed.method || prev.method,
-          customerName: parsed.customerName || prev.customerName,
-          customerPhone: parsed.customerPhone || prev.customerPhone,
+        setOrder({
+          code: parsed.code || '#BL-1027',
+          total: parsed.total || '175.000 VNĐ',
+          subtotal: parsed.subtotal || parsed.total || '175.000 VNĐ',
+          method: parsed.method || 'Cổng VNPay Sandbox',
+          customerName: parsed.customerName || 'Khách hàng BrewLite',
+          customerPhone: parsed.customerPhone || '0901 234 567',
+          date: parsed.date || '27/10/2026 · 09:41',
           orderStatus: parsed.orderStatus || 'PAID',
           transactionRef: parsed.transactionRef || null,
-          items: parsed.items || prev.items,
-        }));
+          items:
+            parsed.items && parsed.items.length > 0
+              ? parsed.items
+              : [
+                  {
+                    id: 1,
+                    name: 'Latte yến mạch',
+                    specs: 'M · 50% đường · Ít đá · Sữa yến mạch',
+                    qtyPrice: '2 × 65.000 VNĐ',
+                    total: '130.000 VNĐ',
+                    image: '/images/latte-yen-mach.png',
+                  },
+                ],
+        });
       } catch (e) {
         // keep defaults
       }
     }
-  }, [paymentCompleted, router, markPaymentComplete]);
+  }, []);
 
   return (
     <div className={styles.container}>
@@ -379,11 +397,26 @@ export default function ConfirmationView() {
 
                   <div className={styles.itemDetails}>
                     <div className={styles.itemName}>{item.name}</div>
-                    <div className={styles.itemSpecs}>{item.specs || item.selectedSize}</div>
-                    <div className={styles.itemQty}>{item.qtyPrice || `${item.quantity || 1} món`}</div>
+                    <div className={styles.itemSpecs}>
+                      {item.specs || (item.size ? `Size ${item.size}` : 'Size tiêu chuẩn')}
+                    </div>
+                    <div className={styles.itemQty}>
+                      {item.qtyPrice ||
+                        (item.price
+                          ? `${item.quantity || 1} × ${new Intl.NumberFormat('vi-VN').format(item.price)} VNĐ`
+                          : `${item.quantity || 1} món`)}
+                    </div>
                   </div>
 
-                  <div className={styles.itemPrice}>{item.total || item.lineTotal || order.total}</div>
+                  <div className={styles.itemPrice}>
+                    {item.total ||
+                      item.lineTotal ||
+                      (item.price
+                        ? new Intl.NumberFormat('vi-VN').format(
+                            item.price * (item.quantity || 1),
+                          ) + ' VNĐ'
+                        : order.total)}
+                  </div>
                 </div>
               ))}
           </div>

@@ -208,7 +208,7 @@ export default function LoginForm({ onSwitchToRegister, onSuccess }) {
           )}
         </div>
 
-        {/* Remember Me & Forgot Password */}
+        {/* Remember Me */}
         <div className={styles.rowBetween}>
           <label className={styles.checkboxLabel}>
             <input
@@ -219,7 +219,6 @@ export default function LoginForm({ onSwitchToRegister, onSuccess }) {
             />
             <span>Ghi nhớ đăng nhập</span>
           </label>
-          <a href="#forgot-password" className={styles.forgotLink}>Quên mật khẩu?</a>
         </div>
 
         {/* Submit Button */}

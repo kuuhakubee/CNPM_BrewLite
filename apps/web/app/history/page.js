@@ -361,8 +361,10 @@ export default function OrderHistoryPage() {
         const rawLocal = localStorage.getItem('brewlite_orders');
         const list = rawLocal ? JSON.parse(rawLocal) : [];
 
-        // Kiểm tra sessionStorage nếu có đơn vừa thanh toán
-        const lastOrderRaw = sessionStorage.getItem('brewlite_last_order');
+        // Kiểm tra localStorage và sessionStorage nếu có đơn vừa thanh toán
+        const lastOrderRaw =
+          localStorage.getItem('brewlite_last_order') ||
+          sessionStorage.getItem('brewlite_last_order');
         if (lastOrderRaw) {
           try {
             const lastOrder = JSON.parse(lastOrderRaw);

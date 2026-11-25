@@ -168,7 +168,16 @@ export default function RegisterForm({ onSwitchToLogin, onSuccess }) {
         window.location.href = '/';
       }
     } catch (err) {
-      setGeneralError(err.message || 'Đăng ký không thành công. Vui lòng thử lại.');
+      const msg = err.message || 'Đăng ký không thành công. Vui lòng thử lại.';
+      setGeneralError(msg);
+      const lower = msg.toLowerCase();
+      if (lower.includes('số điện thoại')) {
+        setErrors((prev) => ({ ...prev, phone: msg }));
+      } else if (lower.includes('tên người dùng') || lower.includes('username') || lower.includes('họ và tên')) {
+        setErrors((prev) => ({ ...prev, fullName: msg }));
+      } else if (lower.includes('email')) {
+        setErrors((prev) => ({ ...prev, email: msg }));
+      }
     }
   };
 
